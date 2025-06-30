@@ -1,0 +1,94 @@
+/* Twitter推文收藏器样式 */
+.twitter-collector-btn {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.collect-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background-color: transparent;
+  color: rgb(83, 100, 113);
+  font-size: 13px;
+  font-weight: 400;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid transparent;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.collect-button:hover {
+  background-color: rgba(29, 155, 240, 0.1);
+  color: rgb(29, 155, 240);
+  border-color: rgba(29, 155, 240, 0.2);
+}
+
+.collect-button svg {
+  transition: all 0.2s ease-in-out;
+}
+
+.collect-button:hover svg {
+  transform: scale(1.1);
+}
+
+.collect-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  white-space: nowrap;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式设计 - 在小屏幕上隐藏文字 */
+@media (max-width: 768px) {
+  .collect-text {
+    display: none;
+  }
+  
+  .collect-button {
+    padding: 6px 8px;
+    min-width: 32px;
+    justify-content: center;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .collect-button {
+    color: rgb(139, 152, 165);
+  }
+  
+  .collect-button:hover {
+    background-color: rgba(29, 155, 240, 0.1);
+    color: rgb(29, 155, 240);
+  }
+}
+
+/* 高对比度模式适配 */
+@media (prefers-contrast: high) {
+  .collect-button {
+    border: 1px solid currentColor;
+  }
+  
+  .collect-button:hover {
+    background-color: currentColor;
+    color: white;
+  }
+} 

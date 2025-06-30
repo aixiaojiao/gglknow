@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter推文收藏器 - 设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 400px;
+            min-height: 500px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            margin: 0;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1da1f2 0%, #1991db 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1da1f2;
+            box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #657786;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #1da1f2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1991db;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f7f9fa;
+            color: #333;
+            border: 1px solid #e1e8ed;
+        }
+
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-success {
+            background: #e6f7e6;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .feature-list {
+            background: #f7f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .feature-list h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .feature-list ul {
+            list-style: none;
+            font-size: 12px;
+            color: #657786;
+        }
+
+        .feature-list li {
+            margin-bottom: 5px;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #1da1f2;
+            font-weight: bold;
+        }
+
+        .footer {
+            background: #f7f9fa;
+            padding: 15px 20px;
+            text-align: center;
+            border-top: 1px solid #e1e8ed;
+        }
+
+        .footer p {
+            font-size: 11px;
+            color: #657786;
+        }
+
+        .path-input-container {
+            position: relative;
+        }
+
+        .path-browse-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1da1f2;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .path-browse-btn:hover {
+            background: #1991db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐦 Twitter推文收藏器</h1>
+            <p>轻松收藏和保存推文到本地</p>
+        </div>
+
+        <div class="content">
+            <div id="statusMessage" class="status-message"></div>
+
+            <div class="feature-list">
+                <h3>功能特点</h3>
+                <ul>
+                    <li>一键收藏推文到本地</li>
+                    <li>支持多种文件格式</li>
+                    <li>自动下载媒体文件</li>
+                    <li>保留完整推文信息</li>
+                </ul>
+            </div>
+
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label for="savePath">保存路径</label>
+                    <div class="path-input-container">
+                        <input type="text" id="savePath" name="savePath" placeholder="例如: Downloads/TwitterCollections" required>
+                        <button type="button" class="path-browse-btn" id="browsePath">浏览</button>
+                    </div>
+                    <div class="help-text">
+                        设置推文保存的本地文件夹路径。路径相对于默认下载文件夹。
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fileFormat">文件格式</label>
+                    <select id="fileFormat" name="fileFormat">
+                        <option value="json">JSON格式 (结构化数据)</option>
+                        <option value="html">HTML格式 (网页格式)</option>
+                        <option value="markdown">Markdown格式 (文档格式)</option>
+                    </select>
+                    <div class="help-text">
+                        选择保存推文的文件格式。HTML格式便于查看，JSON格式便于处理。
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="downloadMedia" name="downloadMedia" checked>
+                        同时下载媒体文件（图片、视频）
+                    </label>
+                    <div class="help-text">
+                        启用后会自动下载推文中的图片和视频文件到单独的media文件夹。
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">保存设置</button>
+                    <button type="button" class="btn btn-secondary" id="resetBtn">重置</button>
+                </div>
+
+                <div class="button-group" style="margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary" id="openBrowserBtn" style="width: 100%;">
+                        📖 打开推文浏览器
+                    </button>
+                </div>
+
+                <div class="button-group" style="margin-top: 10px;">
+                    <button type="button" class="btn btn-secondary" id="debugBtn" style="width: 48%; font-size: 12px;">
+                        🔧 调试工具
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="helpBtn" style="width: 48%; font-size: 12px;">
+                        📖 使用帮助
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="footer">
+            <p>版本 1.0 | 使用愉快 ❤️</p>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
