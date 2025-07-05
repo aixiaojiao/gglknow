@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Twitter推文收藏器",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "在Twitter推文旁添加收藏按钮，将推文保存到本地",
   "permissions": [
     "activeTab",

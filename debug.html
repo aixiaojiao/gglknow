@@ -175,8 +175,8 @@
                         <div class="debug-value" id="settingsValid">检查中...</div>
                     </div>
                 </div>
-                <button class="btn" onclick="checkSettings()">🔄 重新检查设置</button>
-                <button class="btn btn-danger" onclick="clearSettings()">🗑️ 清除所有设置</button>
+                <button class="btn" id="checkSettingsBtn">🔄 重新检查设置</button>
+                <button class="btn btn-danger" id="clearSettingsBtn">🗑️ 清除所有设置</button>
             </div>
 
             <div class="debug-section">
@@ -195,14 +195,14 @@
                         <div class="debug-value" id="hostPermission">检查中...</div>
                     </div>
                 </div>
-                <button class="btn" onclick="checkPermissions()">🔄 重新检查权限</button>
+                <button class="btn" id="checkPermissionsBtn">🔄 重新检查权限</button>
             </div>
 
             <div class="debug-section">
                 <h2>🧪 功能测试</h2>
-                <button class="btn btn-success" onclick="testDownload()">📥 测试下载功能</button>
-                <button class="btn btn-success" onclick="testStorage()">💾 测试存储功能</button>
-                <button class="btn btn-success" onclick="testPathValidation()">📁 测试路径验证</button>
+                <button class="btn btn-success" id="testDownloadBtn">📥 测试下载功能</button>
+                <button class="btn btn-success" id="testStorageBtn">💾 测试存储功能</button>
+                <button class="btn btn-success" id="testPathValidationBtn">📁 测试路径验证</button>
                 
                 <div class="test-results" id="testResults"></div>
             </div>
@@ -210,14 +210,14 @@
             <div class="debug-section">
                 <h2>📝 实时日志</h2>
                 <div class="log-area" id="debugLog"></div>
-                <button class="btn" onclick="clearLog()">🧹 清除日志</button>
-                <button class="btn" onclick="exportLog()">📤 导出日志</button>
+                <button class="btn" id="clearLogBtn">🧹 清除日志</button>
+                <button class="btn" id="exportLogBtn">📤 导出日志</button>
             </div>
 
             <div class="debug-section">
                 <h2>🛠️ 修复工具</h2>
-                <button class="btn btn-success" onclick="resetToDefault()">🔧 重置为默认设置</button>
-                <button class="btn btn-success" onclick="fixCommonIssues()">🩹 修复常见问题</button>
+                <button class="btn btn-success" id="resetToDefaultBtn">🔧 重置为默认设置</button>
+                <button class="btn btn-success" id="fixCommonIssuesBtn">🩹 修复常见问题</button>
             </div>
         </div>
     </div>
@@ -581,6 +581,19 @@
         // 页面加载时自动检查
         document.addEventListener('DOMContentLoaded', () => {
             log('调试工具已启动');
+            
+            // 绑定事件监听器
+            document.getElementById('checkSettingsBtn').addEventListener('click', checkSettings);
+            document.getElementById('clearSettingsBtn').addEventListener('click', clearSettings);
+            document.getElementById('checkPermissionsBtn').addEventListener('click', checkPermissions);
+            document.getElementById('testDownloadBtn').addEventListener('click', testDownload);
+            document.getElementById('testStorageBtn').addEventListener('click', testStorage);
+            document.getElementById('testPathValidationBtn').addEventListener('click', testPathValidation);
+            document.getElementById('clearLogBtn').addEventListener('click', clearLog);
+            document.getElementById('exportLogBtn').addEventListener('click', exportLog);
+            document.getElementById('resetToDefaultBtn').addEventListener('click', resetToDefault);
+            document.getElementById('fixCommonIssuesBtn').addEventListener('click', fixCommonIssues);
+            
             checkSettings();
             checkPermissions();
         });

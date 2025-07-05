@@ -8,10 +8,20 @@ class TwitterCollectorBackground {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === 'collectTweet') {
         this.handleCollectTweet(request.tweetData)
-          .then(result => sendResponse(result))
+          .then(result => {
+            try {
+              sendResponse(result);
+            } catch (error) {
+              console.warn('无法发送响应，可能是上下文已失效:', error);
+            }
+          })
           .catch(error => {
             console.error('处理收藏请求时出错:', error);
-            sendResponse({ success: false, error: error.message });
+            try {
+              sendResponse({ success: false, error: error.message });
+            } catch (sendError) {
+              console.warn('无法发送错误响应，可能是上下文已失效:', sendError);
+            }
           });
         return true; // 保持消息通道开放
       }
@@ -486,9 +496,29 @@ ${mediaSection}
         if (chrome.runtime.lastError) {
           console.error('下载失败:', chrome.runtime.lastError.message);
           reject(new Error(`下载失败: ${chrome.runtime.lastError.message}`));
-        } else {
+        } else if (downloadId) {
           console.log('下载成功，ID:', downloadId);
-          resolve(downloadId);
+          
+          // 监听下载完成状态
+          const onChanged = (delta) => {
+            if (delta.id === downloadId && delta.state && delta.state.current === 'complete') {
+              chrome.downloads.onChanged.removeListener(onChanged);
+              resolve(downloadId);
+            } else if (delta.id === downloadId && delta.state && delta.state.current === 'interrupted') {
+              chrome.downloads.onChanged.removeListener(onChanged);
+              reject(new Error('下载被中断'));
+            }
+          };
+          
+          chrome.downloads.onChanged.addListener(onChanged);
+          
+          // 设置超时，避免永久等待
+          setTimeout(() => {
+            chrome.downloads.onChanged.removeListener(onChanged);
+            resolve(downloadId); // 即使没有收到完成事件，也认为成功
+          }, 5000);
+        } else {
+          reject(new Error('下载ID无效'));
         }
       });
     });

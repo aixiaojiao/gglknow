@@ -385,7 +385,7 @@
     <!-- 模态框 -->
     <div id="modal" class="modal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <button class="modal-close" id="modalCloseBtn">&times;</button>
             <div id="modalContent"></div>
         </div>
     </div>
@@ -569,7 +569,7 @@
                 }
 
                 const tweetsHTML = this.filteredTweets.map((tweet, index) => `
-                    <div class="tweet-card" onclick="showTweetDetail(${index})">
+                    <div class="tweet-card" data-tweet-index="${index}">
                         <div class="tweet-user">
                             <div class="user-avatar">
                                 ${tweet.userName.charAt(0).toUpperCase()}
@@ -595,6 +595,18 @@
                 `).join('');
 
                 container.innerHTML = `<div class="tweets-grid">${tweetsHTML}</div>`;
+                
+                // 添加事件委托处理推文卡片点击
+                const tweetsGrid = container.querySelector('.tweets-grid');
+                if (tweetsGrid) {
+                    tweetsGrid.addEventListener('click', (e) => {
+                        const tweetCard = e.target.closest('.tweet-card');
+                        if (tweetCard) {
+                            const index = parseInt(tweetCard.dataset.tweetIndex);
+                            showTweetDetail(index);
+                        }
+                    });
+                }
             }
 
             showLoading() {
@@ -661,18 +673,24 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // 点击模态框外部关闭
-        document.getElementById('modal').addEventListener('click', (e) => {
-            if (e.target.id === 'modal') {
-                closeModal();
-            }
-        });
+        // 绑定模态框事件监听器
+        document.addEventListener('DOMContentLoaded', () => {
+            // 模态框关闭按钮
+            document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+            
+            // 点击模态框外部关闭
+            document.getElementById('modal').addEventListener('click', (e) => {
+                if (e.target.id === 'modal') {
+                    closeModal();
+                }
+            });
 
-        // ESC键关闭模态框
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeModal();
-            }
+            // ESC键关闭模态框
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
         });
     </script>
 </body>

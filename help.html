@@ -376,8 +376,8 @@
                     </ul>
                 </div>
 
-                <a href="#" class="btn" onclick="openDebugTool()">🔧 打开调试工具</a>
-                <a href="#" class="btn btn-secondary" onclick="openSettings()">⚙️ 打开设置</a>
+                <a href="#" class="btn" id="openDebugToolBtn">🔧 打开调试工具</a>
+                <a href="#" class="btn btn-secondary" id="openSettingsBtn">⚙️ 打开设置</a>
             </div>
 
             <div class="section">
@@ -449,6 +449,19 @@
                 alert('请在Chrome扩展环境中使用此功能');
             }
         }
+
+        // 绑定事件监听器
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('openDebugToolBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                openDebugTool();
+            });
+            
+            document.getElementById('openSettingsBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                openSettings();
+            });
+        });
     </script>
 </body>
 </html> 

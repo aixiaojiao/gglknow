@@ -1,5 +1,28 @@
 # 更新日志
 
+## [v1.1.3] - 2024-12-19
+
+### 🐛 CSP和错误处理修复
+- ✅ 修复Content Security Policy (CSP) 违规错误
+- ✅ 移除所有内联事件处理器 (onclick, onload等)
+- ✅ 改进下载状态监听，修复"Download must be complete"错误
+- ✅ 增强扩展上下文失效时的错误处理
+- ✅ 使用事件委托和addEventListener替代内联事件
+
+### 🔧 技术改进
+- 🎯 重构所有HTML文件的事件处理机制
+- 🛡️ 增强消息传递的错误处理和容错性
+- 📋 改进下载过程的状态跟踪
+- 🔍 添加下载超时保护机制
+
+### 📁 修复的文件
+- debug.html - 移除所有onclick事件
+- help.html - 使用addEventListener绑定事件
+- tweet-browser.html - 使用事件委托处理动态内容
+- background.js - 改进下载和消息处理逻辑
+
+---
+
 ## [v1.1.2] - 2024-12-19
 
 ### 🐛 紧急修复
