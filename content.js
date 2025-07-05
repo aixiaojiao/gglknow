@@ -258,8 +258,31 @@ class TwitterCollector {
       const timeElement = tweetElement.querySelector('time');
       data.tweetTime = timeElement ? timeElement.getAttribute('datetime') : '';
 
-      // 提取媒体信息
-      const images = Array.from(tweetElement.querySelectorAll('img[src*="pbs.twimg.com"], img[src*="media"]')).map(img => img.src);
+      // 提取媒体信息 - 更精确的图片选择器，排除头像和界面图标
+      const imageSelectors = [
+        'img[src*="pbs.twimg.com/media"]',  // Twitter媒体图片
+        'img[src*="video_thumb"]',          // 视频缩略图
+        'div[data-testid="tweetPhoto"] img', // 推文图片容器
+        'div[data-testid="videoComponent"] img' // 视频组件图片
+      ];
+      
+      const images = [];
+      for (const selector of imageSelectors) {
+        const foundImages = Array.from(tweetElement.querySelectorAll(selector));
+        foundImages.forEach(img => {
+          const src = img.src;
+          // 过滤掉头像、表情符号和界面图标
+          if (src && 
+              !src.includes('profile_images') && 
+              !src.includes('emoji') && 
+              !src.includes('icon') && 
+              !src.includes('avatar') &&
+              !images.includes(src)) {
+            images.push(src);
+          }
+        });
+      }
+      
       const videos = Array.from(tweetElement.querySelectorAll('video')).map(video => video.src).filter(src => src);
       
       data.media = {
@@ -321,6 +344,9 @@ class TwitterCollector {
         userName: data.userName,
         userHandle: data.userHandle,
         text: data.text ? data.text.substring(0, 100) + '...' : '(空)',
+        images: data.media.images,
+        imageCount: data.media.images.length,
+        videoCount: data.media.videos.length,
         hasMedia: data.media.images.length > 0 || data.media.videos.length > 0
       });
 

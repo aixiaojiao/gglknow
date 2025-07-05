@@ -54,7 +54,8 @@ class TwitterCollectorBackground {
       
       // 如果启用了媒体下载且有媒体文件
       if (settings.downloadMedia && tweetData.media && 
-          (tweetData.media.images?.length > 0 || tweetData.media.videos?.length > 0)) {
+          ((tweetData.media.images && tweetData.media.images.length > 0) || 
+           (tweetData.media.videos && tweetData.media.videos.length > 0))) {
         console.log('开始下载媒体文件...');
         try {
           await this.downloadMediaFiles(tweetData, settings.savePath);
@@ -359,17 +360,17 @@ class TwitterCollectorBackground {
         <div class="tweet-content">
             <div class="user-info">
                 <div class="user-avatar">
-                    ${this.escapeHtml(tweetData.userName).charAt(0).toUpperCase()}
+                    ${this.escapeHtml(tweetData.userName || '用户').charAt(0).toUpperCase()}
                 </div>
                 <div class="user-details">
-                    <h3>${this.escapeHtml(tweetData.userName)}</h3>
-                    <div class="user-handle">@${this.escapeHtml(tweetData.userHandle)}</div>
+                    <h3>${this.escapeHtml(tweetData.userName || '未知用户')}</h3>
+                    <div class="user-handle">@${this.escapeHtml(tweetData.userHandle || 'unknown')}</div>
                 </div>
             </div>
             
-            <div class="tweet-text">${this.escapeHtml(tweetData.text)}</div>
+            <div class="tweet-text">${this.escapeHtml(tweetData.text || '[无文字内容]')}</div>
             
-            ${tweetData.media && tweetData.media.images.length > 0 ? `
+            ${tweetData.media && tweetData.media.images && tweetData.media.images.length > 0 ? `
             <div class="media-container">
                 <h4>📷 媒体文件</h4>
                 <div class="media-grid">
@@ -405,14 +406,14 @@ class TwitterCollectorBackground {
             </div>
             
             <div class="action-buttons">
-                <a href="${tweetData.tweetUrl}" class="btn btn-primary" target="_blank">
+                <a href="${tweetData.tweetUrl || '#'}" class="btn btn-primary" target="_blank">
                     🔗 查看原推文
                 </a>
             </div>
         </div>
         
         <div class="footer">
-            <p>原始页面: <a href="${tweetData.url}" target="_blank">${tweetData.url}</a></p>
+            <p>原始页面: <a href="${tweetData.url || '#'}" target="_blank">${tweetData.url || '未知页面'}</a></p>
             <p>由 Twitter推文收藏器 收藏 | ${new Date().getFullYear()}</p>
         </div>
     </div>
@@ -421,22 +422,22 @@ class TwitterCollectorBackground {
   }
 
   createMarkdownContent(tweetData) {
-    const mediaSection = tweetData.media && tweetData.media.images.length > 0 
+    const mediaSection = tweetData.media && tweetData.media.images && tweetData.media.images.length > 0 
       ? `\n\n## 媒体文件\n${tweetData.media.images.map(img => `![图片](${img})`).join('\n')}\n`
       : '';
 
     return `# 推文收藏
 
 ## 用户信息
-- **用户名**: ${tweetData.userName}
-- **用户ID**: @${tweetData.userHandle}
+- **用户名**: ${tweetData.userName || '未知用户'}
+- **用户ID**: @${tweetData.userHandle || 'unknown'}
 
 ## 推文内容
-${tweetData.text}
+${tweetData.text || '[无文字内容]'}
 
 ## 推文信息
 - **发布时间**: ${new Date(tweetData.tweetTime || tweetData.timestamp).toLocaleString('zh-CN')}
-- **推文链接**: [查看原推文](${tweetData.tweetUrl})
+- **推文链接**: [查看原推文](${tweetData.tweetUrl || '#'})
 - **回复数**: ${tweetData.stats?.replies || '0'}
 - **转推数**: ${tweetData.stats?.retweets || '0'}
 - **点赞数**: ${tweetData.stats?.likes || '0'}
@@ -445,7 +446,7 @@ ${mediaSection}
 
 ## 收藏信息
 - **收藏时间**: ${new Date(tweetData.timestamp).toLocaleString('zh-CN')}
-- **原始页面**: ${tweetData.url}
+- **原始页面**: ${tweetData.url || '未知页面'}
 - **收藏工具**: Twitter推文收藏器
 `;
   }
