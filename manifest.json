@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Twitter推文收藏器",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "在Twitter推文旁添加收藏按钮，将推文保存到本地",
   "permissions": [
     "activeTab",
@@ -28,7 +28,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["tweet-browser.html", "debug.html", "help.html"],
+      "resources": ["tweet-browser.html", "tweet-browser.js", "debug.html", "help.html"],
       "matches": ["<all_urls>"]
     }
   ]
