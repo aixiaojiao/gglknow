@@ -5,6 +5,7 @@ class TwitterCollectorPopup {
   }
 
   init() {
+    document.body.classList.add('popup');
     this.loadSettings();
     this.bindEvents();
   }
@@ -14,11 +15,6 @@ class TwitterCollectorPopup {
     document.getElementById('settingsForm').addEventListener('submit', (e) => {
       e.preventDefault();
       this.saveSettings();
-    });
-
-    // 重置按钮事件
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      this.resetSettings();
     });
 
     // 浏览路径按钮事件
@@ -34,16 +30,6 @@ class TwitterCollectorPopup {
     // 打开推文浏览器
     document.getElementById('openBrowserBtn').addEventListener('click', () => {
       this.openTweetBrowser();
-    });
-
-    // 打开调试工具
-    document.getElementById('debugBtn').addEventListener('click', () => {
-      this.openDebugTool();
-    });
-
-    // 打开帮助页面
-    document.getElementById('helpBtn').addEventListener('click', () => {
-      this.openHelpPage();
     });
   }
 
@@ -117,16 +103,6 @@ class TwitterCollectorPopup {
     } catch (error) {
       console.error('保存设置失败:', error);
       this.showStatus('保存失败: ' + error.message, 'error');
-    }
-  }
-
-  resetSettings() {
-    if (confirm('确定要重置所有设置吗？')) {
-      document.getElementById('savePath').value = 'Downloads/Twitter';
-      document.getElementById('fileFormat').value = 'html';
-      document.getElementById('downloadMedia').checked = true;
-      
-      this.showStatus('设置已重置', 'success');
     }
   }
 
@@ -252,101 +228,58 @@ class TwitterCollectorPopup {
   }
 
   cleanPath(path) {
-    // 相对路径处理
-    // 移除开头和结尾的斜杠
-    path = path.replace(/^[\/\\]+|[\/\\]+$/g, '');
-    
-    // 标准化路径分隔符
-    path = path.replace(/[\\]/g, '/');
-    
-    // 移除多余的斜杠
-    path = path.replace(/\/+/g, '/');
-    
-    return path;
+    // 替换所有反斜杠为正斜杠，并移除多余的斜杠
+    return path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '');
   }
 
   async testPath(path) {
     try {
-      // 尝试创建一个测试文件来验证路径
-      const testContent = JSON.stringify({
-        test: true,
-        timestamp: new Date().toISOString(),
-        message: '这是一个测试文件，可以安全删除'
-      }, null, 2);
-
-      const testFileName = `${path}/test_${Date.now()}.json`;
-
-      // 使用Chrome下载API测试路径
-      chrome.downloads.download({
-        url: 'data:application/json;charset=utf-8,' + encodeURIComponent(testContent),
-        filename: testFileName,
-        saveAs: false
-      }, (downloadId) => {
-        if (chrome.runtime.lastError) {
-          console.error('路径测试失败:', chrome.runtime.lastError.message);
-          this.showStatus('路径测试失败: ' + chrome.runtime.lastError.message, 'error');
-        } else {
-          console.log('路径测试成功，下载ID:', downloadId);
-          this.showStatus('路径测试成功！', 'success');
-          
-          // 清理测试文件
-          setTimeout(() => {
-            if (chrome.downloads && chrome.downloads.removeFile) {
-              chrome.downloads.removeFile(downloadId, () => {
-                console.log('测试文件已清理');
-              });
-            }
-          }, 2000);
-        }
+      const isAvailable = await chrome.runtime.sendMessage({ 
+        action: 'testPath', 
+        path: path 
       });
 
+      if (isAvailable) {
+        this.showStatus('路径可用', 'success');
+      } else {
+        // 由于安全限制，我们无法获得详细的失败原因
+        this.showStatus('路径可能不可用，请检查权限或路径拼写', 'error');
+      }
     } catch (error) {
-      console.error('路径测试出错:', error);
-      this.showStatus('路径测试出错: ' + error.message, 'error');
+      console.error('测试路径时出错:', error.message);
+      // 根据错误类型提供更具体的建议
+      if (error.message.includes('Extension context invalidated')) {
+        this.showStatus('扩展已更新，请刷新页面后重试', 'error');
+      } else {
+        this.showStatus('无法验证路径，请稍后重试', 'error');
+      }
     }
   }
 
   getStoredSettings() {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get([
-        'savePath', 
-        'fileFormat', 
-        'downloadMedia', 
-        'lastUpdated'
-      ], (result) => {
-        resolve(result);
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.get(['settings'], (result) => {
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        resolve(result.settings || {});
       });
     });
   }
 
   storeSettings(settings) {
     return new Promise((resolve, reject) => {
-      chrome.storage.sync.set(settings, () => {
+      chrome.storage.local.set({ settings }, () => {
         if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve();
+          return reject(chrome.runtime.lastError);
         }
+        resolve();
       });
     });
   }
 
   openTweetBrowser() {
-    // 创建推文浏览器的HTML内容
-    const browserURL = chrome.runtime.getURL('tweet-browser.html');
-    chrome.tabs.create({ url: browserURL });
-  }
-
-  openDebugTool() {
-    // 创建调试工具的HTML内容
-    const debugURL = chrome.runtime.getURL('debug.html');
-    chrome.tabs.create({ url: debugURL });
-  }
-
-  openHelpPage() {
-    // 创建帮助页面的HTML内容
-    const helpURL = chrome.runtime.getURL('help.html');
-    chrome.tabs.create({ url: helpURL });
+    chrome.tabs.create({ url: 'tweet-browser.html' });
   }
 
   showStatus(message, type = 'success') {
@@ -355,14 +288,16 @@ class TwitterCollectorPopup {
     statusEl.className = `status-message status-${type}`;
     statusEl.style.display = 'block';
 
-    // 自动隐藏状态消息
+    // 5秒后自动隐藏
     setTimeout(() => {
-      statusEl.style.display = 'none';
-    }, type === 'error' ? 5000 : type === 'warning' ? 4000 : 3000);
+      if (statusEl.textContent === message) {
+        statusEl.style.display = 'none';
+      }
+    }, 5000);
   }
 }
 
-// 页面加载完成后初始化
+// 初始化
 document.addEventListener('DOMContentLoaded', () => {
   new TwitterCollectorPopup();
 });

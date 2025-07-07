@@ -1,3 +1,240 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* General styles for all pages */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f4f8; /* Light blue-gray background */
+    color: #333;
+}
+
+/* Popup specific styles */
+body.popup {
+    width: 380px;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #e0eafc, #cfdef3);
+}
+
+.container {
+    padding: 0;
+}
+
+.header {
+    background: linear-gradient(135deg, #1da1f2, #1a8cd8);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-radius: 0;
+}
+
+.header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.header p {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 4px;
+}
+
+.content {
+    padding: 20px;
+}
+
+.setting-card {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.path-input-group {
+    display: flex;
+    width: 65%;
+}
+
+#savePath {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccd6dd;
+    border-right: none; /* Remove right border for seamless grouping */
+    border-radius: 6px 0 0 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    line-height: 1.5; /* Ensure consistent line height */
+}
+#savePath:focus {
+    outline: none;
+    border-color: #1da1f2;
+    z-index: 2;
+    position: relative;
+}
+
+.btn-browse {
+    padding: 8px 12px;
+    border: 1px solid #ccd6dd;
+    border-left: none; /* Remove left border for seamless grouping */
+    background: #f7f9fa;
+    color: #333;
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5; /* Ensure consistent line height */
+    transition: background-color 0.2s;
+}
+.btn-browse:hover {
+    background: #eef2f5;
+}
+
+#fileFormat {
+    width: 65%;
+    padding: 8px 12px;
+    border: 1px solid #ccd6dd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23657786' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+/* Toggle Switch for Download Media */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 26px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #1da1f2;
+    color: white;
+    box-shadow: 0 2px 4px rgba(29, 161, 242, 0.2);
+}
+.btn-primary:hover {
+    background: #1a8cd8;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #eaf4fc;
+    color: #1a8cd8;
+    border: 1px solid #bde0fe;
+}
+.btn-secondary:hover {
+    background: #dceefc;
+}
+
+/* Status Messages */
+.status-message {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    display: none;
+}
+
+.status-success {
+    background: #e6f7e6;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+
+.status-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
 /* Twitter推文收藏器样式 */
 .twitter-collector-btn {
   display: inline-flex;

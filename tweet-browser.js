@@ -35,9 +35,15 @@ class TweetBrowser {
         for (let file of files) {
             try {
                 const content = await this.readFile(file);
-                const tweet = this.parseFile(content, file.name);
-                if (tweet) {
-                    this.tweets.push(tweet);
+                const parsedData = this.parseFile(content, file.name);
+                if (parsedData) {
+                    if (Array.isArray(parsedData)) {
+                        // Handle JSON file with an array of tweets
+                        this.tweets.push(...parsedData);
+                    } else {
+                        // Handle HTML file or JSON with a single tweet object
+                        this.tweets.push(parsedData);
+                    }
                 }
             } catch (error) {
                 console.error('读取文件失败:', file.name, error);
@@ -175,31 +181,41 @@ class TweetBrowser {
             return;
         }
 
-        const tweetsHTML = this.filteredTweets.map((tweet, index) => `
+        const tweetsHTML = this.filteredTweets.map((tweet, index) => {
+            // Add default value protection for potentially missing fields
+            const userName = tweet.userName || '未知用户';
+            const userHandle = tweet.userHandle || 'unknown';
+            const text = tweet.text || '';
+            const timestamp = tweet.timestamp ? new Date(tweet.timestamp).toLocaleDateString('zh-CN') : '未知日期';
+            const images = tweet.media?.images || [];
+            const likes = tweet.stats?.likes || '0';
+            const retweets = tweet.stats?.retweets || '0';
+
+            return `
             <div class="tweet-card" data-tweet-index="${index}">
                 <div class="tweet-user">
                     <div class="user-avatar">
-                        ${tweet.userName.charAt(0).toUpperCase()}
+                        ${userName.charAt(0).toUpperCase()}
                     </div>
                     <div class="user-info">
-                        <h4>${this.escapeHtml(tweet.userName)}</h4>
-                        <div class="user-handle">@${this.escapeHtml(tweet.userHandle)}</div>
+                        <h4>${this.escapeHtml(userName)}</h4>
+                        <div class="user-handle">@${this.escapeHtml(userHandle)}</div>
                     </div>
                 </div>
                 
-                <div class="tweet-text">${this.escapeHtml(tweet.text)}</div>
+                <div class="tweet-text">${this.escapeHtml(text)}</div>
                 
                 <div class="tweet-meta">
-                    <span class="tweet-date">${new Date(tweet.timestamp).toLocaleDateString('zh-CN')}</span>
+                    <span class="tweet-date">${timestamp}</span>
                     <div class="tweet-stats">
-                        ${tweet.media && tweet.media.images && tweet.media.images.length > 0 ? 
-                            `<span>📷 ${tweet.media.images.length}</span>` : ''}
-                        <span>❤️ ${tweet.stats?.likes || '0'}</span>
-                        <span>🔁 ${tweet.stats?.retweets || '0'}</span>
+                        ${images.length > 0 ? `<span>📷 ${images.length}</span>` : ''}
+                        <span>❤️ ${likes}</span>
+                        <span>🔁 ${retweets}</span>
                     </div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
         container.innerHTML = `<div class="tweets-grid">${tweetsHTML}</div>`;
         
