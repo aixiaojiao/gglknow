@@ -246,7 +246,7 @@
                     <li>
                         <div class="step-title">设置保存路径</div>
                         <div class="step-description">
-                            在"保存路径"输入框中输入您希望保存推文的文件夹名称，例如：<code>TwitterCollections</code> 或 <code>Downloads/Twitter</code>
+                            在"保存路径"输入框中输入您希望保存推文的文件夹名称，默认为：<code>Downloads/Twitter</code>
                         </div>
                     </li>
                     <li>
@@ -275,25 +275,30 @@
                 
                 <div class="highlight">
                     <h4>💡 重要提示</h4>
-                    <p>保存路径是相对于浏览器默认下载文件夹的路径。例如，如果您的默认下载文件夹是 <code>C:\Users\用户名\Downloads</code>，设置路径为 <code>TwitterCollections</code>，则文件会保存到 <code>C:\Users\用户名\Downloads\TwitterCollections</code>。</p>
+                    <p><strong>路径格式说明：</strong></p>
+                    <p>所有路径都是相对于浏览器默认下载文件夹的相对路径。例如，如果您的默认下载文件夹是 <code>C:\Users\用户名\Downloads</code>，设置路径为 <code>Downloads/Twitter</code>，则文件会保存到 <code>C:\Users\用户名\Downloads\Downloads\Twitter</code>。</p>
                 </div>
 
                 <div class="path-examples">
-                    <h4>推荐路径示例：</h4>
+                    <h4>路径示例：</h4>
                     <ul>
-                        <li>TwitterCollections</li>
-                        <li>Downloads/Twitter</li>
+                        <li>Downloads/Twitter（默认）</li>
+                        <li>Twitter</li>
                         <li>Documents/TwitterBackup</li>
-                        <li>Desktop/推文收藏</li>
+                        <li>MyFolder/Twitter</li>
+                        <li>SocialMedia/Twitter</li>
                         <li>推文收藏/2024</li>
                     </ul>
                 </div>
 
                 <div class="warning">
                     <h4>⚠️ 路径注意事项</h4>
-                    <p>避免使用以下字符：< > : " | ? *<br>
-                    路径不要以斜杠开头或结尾<br>
-                    使用英文或中文字符，避免特殊符号</p>
+                    <p>• 避免使用以下字符：< > : " | ? *<br>
+                    • 使用英文或中文字符，避免特殊符号<br>
+                    • 路径长度不要超过260个字符<br>
+                    • 不要以斜杠开头或结尾<br>
+                    • 避免连续的斜杠（如 //）<br>
+                    • 建议使用正斜杠（/）而不是反斜杠（\）</p>
                 </div>
             </div>
 
@@ -306,7 +311,7 @@
                         <strong>解决方法：</strong>
                         <ol>
                             <li>点击插件图标打开设置页面</li>
-                            <li>在"保存路径"输入框中输入路径，如：<code>TwitterCollections</code></li>
+                            <li>在"保存路径"输入框中输入路径，如：<code>Downloads/Twitter</code></li>
                             <li>点击"保存设置"按钮</li>
                             <li>等待出现"设置保存成功"提示</li>
                             <li>返回Twitter页面重新尝试收藏</li>
@@ -349,7 +354,7 @@
                     <div class="faq-question">Q: 下载的文件在哪里？</div>
                     <div class="faq-answer">
                         文件会保存到：<code>[浏览器默认下载文件夹]/[您设置的路径]</code><br>
-                        例如：<code>C:\Users\用户名\Downloads\TwitterCollections</code><br>
+                        例如：<code>C:\Users\用户名\Downloads\Downloads\Twitter</code><br>
                         <br>
                         <strong>查找方法：</strong>
                         <ol>

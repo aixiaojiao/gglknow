@@ -496,7 +496,7 @@
             
             try {
                 const defaultSettings = {
-                    savePath: 'TwitterCollections',
+                    savePath: 'Downloads/Twitter',
                     fileFormat: 'html',
                     downloadMedia: true,
                     lastUpdated: new Date().toISOString()
@@ -534,7 +534,7 @@
                 const updates = {};
                 
                 if (!settings.savePath) {
-                    updates.savePath = 'TwitterCollections';
+                    updates.savePath = 'Downloads/Twitter';
                     needsUpdate = true;
                     log('修复: 设置默认保存路径');
                 }

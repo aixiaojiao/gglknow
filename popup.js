@@ -49,16 +49,39 @@ class TwitterCollectorPopup {
 
   async loadSettings() {
     try {
-      const settings = await this.getStoredSettings();
-      
-      // 填充表单
-      document.getElementById('savePath').value = settings.savePath || 'TwitterCollections';
-      document.getElementById('fileFormat').value = settings.fileFormat || 'html';
-      document.getElementById('downloadMedia').checked = settings.downloadMedia !== false;
+      const storedSettings = await this.getStoredSettings();
+      const settings = { ...storedSettings };
+      let needsSave = false;
 
-      this.showStatus('设置已加载', 'success');
+      // 如果未设置，则提供默认值
+      if (!settings.savePath) {
+        settings.savePath = 'Downloads/Twitter';
+        needsSave = true;
+      }
+      if (!settings.fileFormat) {
+        settings.fileFormat = 'html';
+        needsSave = true;
+      }
+      if (typeof settings.downloadMedia !== 'boolean') {
+        settings.downloadMedia = true;
+        needsSave = true;
+      }
+
+      // 填充表单
+      document.getElementById('savePath').value = settings.savePath;
+      document.getElementById('fileFormat').value = settings.fileFormat;
+      document.getElementById('downloadMedia').checked = settings.downloadMedia;
+
+      // 如果是首次配置，自动保存默认设置
+      if (needsSave) {
+        settings.lastUpdated = new Date().toISOString();
+        await this.storeSettings(settings);
+        this.showStatus('已自动配置默认设置，可以开始收藏了！', 'success');
+      } else {
+        this.showStatus('设置已加载', 'success');
+      }
     } catch (error) {
-      console.error('加载设置失败:', error);
+      console.error('加载或自动配置设置失败:', error);
       this.showStatus('加载设置失败: ' + error.message, 'error');
     }
   }
@@ -99,7 +122,7 @@ class TwitterCollectorPopup {
 
   resetSettings() {
     if (confirm('确定要重置所有设置吗？')) {
-      document.getElementById('savePath').value = 'TwitterCollections';
+      document.getElementById('savePath').value = 'Downloads/Twitter';
       document.getElementById('fileFormat').value = 'html';
       document.getElementById('downloadMedia').checked = true;
       
@@ -108,20 +131,79 @@ class TwitterCollectorPopup {
   }
 
   browsePath() {
-    // 由于安全限制，浏览器插件无法直接打开文件夹选择器
-    // 提供一些常用路径建议
-    const suggestions = [
-      'TwitterCollections',
-      'Downloads/Twitter',
-      'Documents/TwitterBackup',
-      'Desktop/推文收藏',
-      'Downloads/推文收藏'
-    ];
+    // 获取当前路径或使用默认路径
+    const currentPath = document.getElementById('savePath').value || 'Downloads/Twitter';
 
-    const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
-    document.getElementById('savePath').value = suggestion;
-    
-    this.showStatus(`建议路径: ${suggestion}`, 'success');
+    // 创建简化的路径输入对话框
+    const dialogHtml = `
+      <div class="path-dialog-overlay" id="pathDialog">
+        <div class="path-dialog">
+          <h3>设置保存路径</h3>
+          <p>请输入保存路径（相对于默认下载文件夹）：</p>
+          <div class="custom-path-section">
+            <label>保存路径：</label>
+            <input type="text" id="customPathInput" value="${currentPath}" placeholder="例如：Downloads/Twitter">
+            <small>路径相对于默认下载文件夹。您可以直接修改、粘贴或输入新的路径。</small>
+          </div>
+          <div class="path-dialog-buttons">
+            <button id="pathDialogCancel">取消</button>
+            <button id="pathDialogConfirm">确定</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 添加对话框到页面
+    document.body.insertAdjacentHTML('beforeend', dialogHtml);
+
+    // 绑定事件
+    const dialog = document.getElementById('pathDialog');
+    const customInput = document.getElementById('customPathInput');
+    const confirmBtn = document.getElementById('pathDialogConfirm');
+    const cancelBtn = document.getElementById('pathDialogCancel');
+
+    // 自动选中输入框内容，方便用户直接替换
+    customInput.select();
+    customInput.focus();
+
+    // 确定按钮
+    confirmBtn.addEventListener('click', () => {
+      const finalPath = customInput.value.trim();
+      if (finalPath) {
+        document.getElementById('savePath').value = finalPath;
+        this.validatePath(finalPath);
+        this.showStatus(`路径已设置: ${finalPath}`, 'success');
+      }
+      dialog.remove();
+    });
+
+    // 取消按钮
+    cancelBtn.addEventListener('click', () => {
+      dialog.remove();
+    });
+
+    // 点击遮罩关闭
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) {
+        dialog.remove();
+      }
+    });
+
+    // ESC键关闭
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        dialog.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // 回车键确定
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        confirmBtn.click();
+      }
+    });
   }
 
   validatePath(path) {
@@ -133,7 +215,7 @@ class TwitterCollectorPopup {
       return false;
     }
 
-    // 检查非法字符
+    // 相对路径验证
     const invalidChars = /[<>:"|?*]/;
     if (invalidChars.test(path)) {
       pathInput.style.borderColor = '#dc3545';
@@ -141,11 +223,36 @@ class TwitterCollectorPopup {
       return false;
     }
 
+    // 检查路径长度
+    if (path.length > 260) {
+      pathInput.style.borderColor = '#dc3545';
+      this.showStatus('路径过长，请使用较短的路径', 'error');
+      return false;
+    }
+
+    // 检查连续的路径分隔符
+    if (/[\\/]{2,}/.test(path)) {
+      pathInput.style.borderColor = '#dc3545';
+      this.showStatus('路径包含连续的分隔符，请使用单个 / 或 \\', 'error');
+      return false;
+    }
+
+    // 检查路径是否以分隔符结尾
+    if (/[\\/]$/.test(path)) {
+      pathInput.style.borderColor = '#dc3545';
+      this.showStatus('路径不应以分隔符结尾', 'error');
+      return false;
+    }
+
+    // 相对路径验证通过
     pathInput.style.borderColor = '#28a745';
+    this.showStatus('✓ 路径验证通过', 'success');
+    
     return true;
   }
 
   cleanPath(path) {
+    // 相对路径处理
     // 移除开头和结尾的斜杠
     path = path.replace(/^[\/\\]+|[\/\\]+$/g, '');
     
@@ -251,7 +358,7 @@ class TwitterCollectorPopup {
     // 自动隐藏状态消息
     setTimeout(() => {
       statusEl.style.display = 'none';
-    }, type === 'error' ? 5000 : 3000);
+    }, type === 'error' ? 5000 : type === 'warning' ? 4000 : 3000);
   }
 }
 

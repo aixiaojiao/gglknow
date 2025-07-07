@@ -106,7 +106,7 @@ class TwitterCollectorBackground {
           reject(new Error(chrome.runtime.lastError.message));
         } else {
           const settings = {
-            savePath: result.savePath || '',
+            savePath: result.savePath || 'Downloads/Twitter',
             fileFormat: result.fileFormat || 'html',
             downloadMedia: result.downloadMedia !== false
           };

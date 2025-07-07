@@ -86,8 +86,21 @@ class TwitterCollector {
     }
   }
 
+  // 检查Chrome扩展API是否可用
+  isChromeExtensionAvailable() {
+    return typeof chrome !== 'undefined' && 
+           chrome.runtime && 
+           chrome.runtime.sendMessage && 
+           !chrome.runtime.lastError;
+  }
+
   async collectTweet(tweetElement, buttonElement) {
     try {
+      // 检查Chrome扩展API是否可用
+      if (!this.isChromeExtensionAvailable()) {
+        throw new Error('扩展上下文不可用，请刷新页面重试');
+      }
+
       // 显示加载状态
       const button = buttonElement.querySelector('.collect-button');
       const originalContent = button.innerHTML;
@@ -110,59 +123,56 @@ class TwitterCollector {
         throw new Error('无法提取推文数据，请稍后重试');
       }
       
-      // 发送到后台脚本处理下载
-      chrome.runtime.sendMessage({
-        action: 'collectTweet',
-        tweetData: tweetData
-      }, (response) => {
-        console.log('后台脚本响应:', response);
-        
-        if (chrome.runtime.lastError) {
-          console.error('Chrome运行时错误:', chrome.runtime.lastError);
-          // 显示错误状态
-          button.innerHTML = `
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="#f91880">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            <span style="color: #f91880;">连接失败</span>
-          `;
-          
-          setTimeout(() => {
-            button.innerHTML = originalContent;
-          }, 3000);
-          return;
-        }
-        
-        if (response && response.success) {
-          // 显示成功状态
-          button.innerHTML = `
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="#1d9bf0">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
-            </svg>
-            <span style="color: #1d9bf0;">已收藏</span>
-          `;
-          
-          // 2秒后恢复原状
-          setTimeout(() => {
-            button.innerHTML = originalContent;
-          }, 2000);
-        } else {
-          // 显示错误状态
-          const errorMsg = response?.error || '未知错误';
-          console.error('收藏失败:', errorMsg);
-          
-          button.innerHTML = `
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="#f91880">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            <span style="color: #f91880;" title="${errorMsg}">收藏失败</span>
-          `;
-          
-          setTimeout(() => {
-            button.innerHTML = originalContent;
-          }, 3000);
+      // 使用Promise包装sendMessage以更好地处理错误
+      const sendMessagePromise = new Promise((resolve, reject) => {
+        try {
+          chrome.runtime.sendMessage({
+            action: 'collectTweet',
+            tweetData: tweetData
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response);
+            }
+          });
+        } catch (error) {
+          reject(error);
         }
       });
+
+      const response = await sendMessagePromise;
+      console.log('后台脚本响应:', response);
+      
+      if (response && response.success) {
+        // 显示成功状态
+        button.innerHTML = `
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="#1d9bf0">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+          </svg>
+          <span style="color: #1d9bf0;">已收藏</span>
+        `;
+        
+        // 2秒后恢复原状
+        setTimeout(() => {
+          button.innerHTML = originalContent;
+        }, 2000);
+      } else {
+        // 显示错误状态
+        const errorMsg = response?.error || '未知错误';
+        console.error('收藏失败:', errorMsg);
+        
+        button.innerHTML = `
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="#f91880">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <span style="color: #f91880;" title="${errorMsg}">收藏失败</span>
+        `;
+        
+        setTimeout(() => {
+          button.innerHTML = originalContent;
+        }, 3000);
+      }
 
     } catch (error) {
       console.error('收藏推文时出错:', error);
@@ -171,11 +181,18 @@ class TwitterCollector {
       const button = buttonElement.querySelector('.collect-button');
       const originalContent = button.innerHTML;
       
+      let errorMessage = '提取失败';
+      if (error.message.includes('扩展上下文')) {
+        errorMessage = '扩展失效';
+      } else if (error.message.includes('sendMessage')) {
+        errorMessage = '连接失败';
+      }
+      
       button.innerHTML = `
         <svg viewBox="0 0 24 24" width="18" height="18" fill="#f91880">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>
-        <span style="color: #f91880;" title="${error.message}">提取失败</span>
+        <span style="color: #f91880;" title="${error.message}">${errorMessage}</span>
       `;
       
       setTimeout(() => {
