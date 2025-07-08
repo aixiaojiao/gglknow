@@ -2,7 +2,7 @@ class TweetBrowser {
     constructor() {
         this.tweets = [];
         this.filteredTweets = [];
-        this.loadedFileNames = new Set();
+        this.loadedFileIds = new Set();
         this.currentFilter = 'all';
         this.init();
     }
@@ -12,7 +12,14 @@ class TweetBrowser {
     }
 
     bindEvents() {
-        document.getElementById('fileInput').addEventListener('change', (e) => {
+        const fileInput = document.getElementById('fileInput');
+        
+        // 在文件选择前清空，确保选择相同文件也能触发change事件
+        fileInput.addEventListener('click', (e) => {
+            e.target.value = null;
+        });
+
+        fileInput.addEventListener('change', (e) => {
             this.loadFiles(e.target.files);
         });
 
@@ -40,48 +47,55 @@ class TweetBrowser {
     async loadFiles(files) {
         if (!files.length) return;
 
-        this.showLoading();
-        let loadedCount = 0;
-        let skippedCount = 0;
+        try {
+            this.showLoading();
+            let loadedCount = 0;
+            let skippedCount = 0;
 
-        for (let file of files) {
-            if (this.loadedFileNames.has(file.name)) {
-                console.log('Skipping already loaded file:', file.name);
-                skippedCount++;
-                continue;
-            }
-
-            try {
-                const content = await this.readFile(file);
-                const parsedData = this.parseFile(content, file.name);
-                if (parsedData) {
-                    if (Array.isArray(parsedData)) {
-                        this.tweets.push(...parsedData);
-                    } else {
-                        this.tweets.push(parsedData);
-                    }
-                    this.loadedFileNames.add(file.name);
-                    loadedCount++;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileId = `${file.name}-${file.size}-${file.lastModified}`;
+                if (this.loadedFileIds.has(fileId)) {
+                    skippedCount++;
+                    continue;
                 }
-            } catch (error) {
-                console.error('读取文件失败:', file.name, error);
+
+                try {
+                    const content = await this.readFile(file);
+                    const parsedData = this.parseFile(content, file.name);
+                    if (parsedData) {
+                        const tweetsToAdd = Array.isArray(parsedData) ? parsedData : [parsedData];
+                        tweetsToAdd.forEach(tweet => {
+                            tweet.id = `tweet-${this.tweets.length}-${Date.now()}`;
+                            tweet.sourceFileId = fileId;
+                            this.tweets.push(tweet);
+                        });
+                        this.loadedFileIds.add(fileId);
+                        loadedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Failed to read or parse file ${file.name}:`, error);
+                }
             }
-        }
 
-        this.tweets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        this.updateStats();
-        this.filterTweets();
-        this.renderTweets();
+            this.tweets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            this.updateStats();
+            this.filterTweets();
+            this.renderTweets();
 
-        // 显示加载结果通知
-        let message = `您选择了 ${files.length} 个文件。`;
-        if (loadedCount > 0) {
-            message += ` ${loadedCount} 个新文件加载成功。`;
+            let message = `您选择了 ${files.length} 个文件。`;
+            if (loadedCount > 0) {
+                message += ` ${loadedCount} 个新文件加载成功。`;
+            }
+            if (skippedCount > 0) {
+                message += ` ${skippedCount} 个文件因重复被跳过。`;
+            }
+            this.showNotification(message);
+
+        } catch (fatalError) {
+            console.error('A critical error occurred during the file loading process:', fatalError);
+            this.showNotification('加载过程中发生严重错误，请检查控制台。');
         }
-        if (skippedCount > 0) {
-            message += ` ${skippedCount} 个文件因重复被跳过。`;
-        }
-        this.showNotification(message);
     }
 
     readFile(file) {
@@ -198,7 +212,8 @@ class TweetBrowser {
 
     renderTweets() {
         const container = document.getElementById('tweetsContainer');
-        
+        container.innerHTML = ''; // 清空容器
+
         if (this.filteredTweets.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -209,65 +224,122 @@ class TweetBrowser {
             return;
         }
 
-        const tweetsHTML = this.filteredTweets.map((tweet, index) => {
-            // Add default value protection for potentially missing fields
+        const grid = document.createElement('div');
+        grid.className = 'tweets-grid';
+
+        this.filteredTweets.forEach((tweet, index) => {
+            const card = document.createElement('div');
+            card.className = 'tweet-card';
+            card.dataset.tweetIndex = index;
+            card.dataset.tweetId = tweet.id;
+
             const userName = tweet.userName || '未知用户';
             const userHandle = tweet.userHandle || 'unknown';
             const text = tweet.text || '';
             const timestamp = tweet.timestamp ? new Date(tweet.timestamp).toLocaleDateString('zh-CN') : '未知日期';
-            const images = tweet.media?.images || [];
             const likes = tweet.stats?.likes || '0';
             const retweets = tweet.stats?.retweets || '0';
 
-            return `
-            <div class="tweet-card" data-tweet-index="${index}">
+            card.innerHTML = `
+                <button class="delete-btn" data-tweet-id="${tweet.id}">&times;</button>
                 <div class="tweet-user">
                     <div class="user-avatar">
                         ${userName.charAt(0).toUpperCase()}
                     </div>
                     <div class="user-info">
-                        <h4>${this.escapeHtml(userName)}</h4>
-                        <div class="user-handle">@${this.escapeHtml(userHandle)}</div>
+                        <h4>${userName}</h4>
+                        <span class="user-handle">@${userHandle}</span>
                     </div>
                 </div>
-                
-                <div class="tweet-text">${this.escapeHtml(text)}</div>
-                
-                <div class="tweet-meta">
-                    <span class="tweet-date">${timestamp}</span>
-                    <div class="tweet-stats">
-                        ${images.length > 0 ? `<span>📷 ${images.length}</span>` : ''}
-                        <span>❤️ ${likes}</span>
-                        <span>🔁 ${retweets}</span>
-                    </div>
+                <p class="tweet-text">${this.escapeHtml(text)}</p>
+                <div class="tweet-footer">
+                    <span>❤️ ${likes}</span>
+                    <span>🔁 ${retweets}</span>
+                    <span class="tweet-timestamp">${timestamp}</span>
                 </div>
-            </div>
             `;
-        }).join('');
 
-        container.innerHTML = `<div class="tweets-grid">${tweetsHTML}</div>`;
-        
-        // 添加事件委托处理推文卡片点击
-        const tweetsGrid = container.querySelector('.tweets-grid');
-        if (tweetsGrid) {
-            tweetsGrid.addEventListener('click', (e) => {
-                const tweetCard = e.target.closest('.tweet-card');
-                if (tweetCard) {
-                    const index = parseInt(tweetCard.dataset.tweetIndex);
-                    showTweetDetail(index);
-                }
+            card.addEventListener('click', () => {
+                showTweetDetail(index);
             });
-        }
+
+            const deleteButton = card.querySelector('.delete-btn');
+            deleteButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteTweet(tweet.id);
+            });
+
+            grid.appendChild(card);
+        });
+
+        container.appendChild(grid);
     }
 
     showLoading() {
-        document.getElementById('tweetsContainer').innerHTML = '<div class="loading">正在加载推文...</div>';
+        const container = document.getElementById('tweetsContainer');
+        container.innerHTML = '<div class="loading">正在加载推文...</div>';
     }
 
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    deleteTweet(tweetId) {
+        const tweetToDelete = this.tweets.find(t => t.id === tweetId);
+        if (!tweetToDelete) return;
+
+        const sourceFileId = tweetToDelete.sourceFileId;
+
+        // 移除推文
+        this.tweets = this.tweets.filter(t => t.id !== tweetId);
+
+        // 检查是否还有其他推文来自同一个源文件
+        const remainingTweetsFromSource = this.tweets.some(t => t.sourceFileId === sourceFileId);
+
+        // 如果没有了，就从已加载文件列表中移除该文件ID
+        if (!remainingTweetsFromSource && sourceFileId) {
+            this.loadedFileIds.delete(sourceFileId);
+        }
+
+        this.filterTweets();
+        this.renderTweets();
+        this.updateStats();
+        this.showNotification('推文已删除。');
+    }
+
+    showTweetDetail(index) {
+        const tweet = this.filteredTweets[index];
+        if (!tweet) return;
+
+        const modal = document.getElementById('tweetModal');
+        const modalContent = document.getElementById('modalContent');
+
+        const imagesHTML = (tweet.media?.images || [])
+            .map(src => `<img src="${src}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
+            .join('');
+
+        modalContent.innerHTML = `
+            <div class="tweet-card" style="box-shadow: none; border: none;">
+                <div class="tweet-user">
+                    <div class="user-avatar">${(tweet.userName || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="user-info">
+                        <h4>${tweet.userName || '未知用户'}</h4>
+                        <span class="user-handle">@${tweet.userHandle || 'unknown'}</span>
+                    </div>
+                </div>
+                <p class="tweet-text-full">${tweet.text || ''}</p>
+                <div class="media-container">${imagesHTML}</div>
+                <div class="tweet-stats">
+                    <span>${tweet.stats?.likes || 0} Likes</span>
+                    <span>${tweet.stats?.retweets || 0} Retweets</span>
+                    <span class="tweet-timestamp">${tweet.timestamp ? new Date(tweet.timestamp).toLocaleString('zh-CN') : ''}</span>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'block';
     }
 }
 
