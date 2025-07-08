@@ -94,6 +94,27 @@
             border-color: #1da1f2;
         }
 
+        .author-select {
+            padding: 10px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+            min-width: 150px;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #657786;
+            font-weight: 600;
+        }
+
         .filter-buttons {
             display: flex;
             gap: 10px;
@@ -386,12 +407,30 @@
                 </label>
             </div>
             
-            <input type="text" id="searchBox" class="search-box" placeholder="搜索推文内容、用户名...">
+            <input type="text" id="searchBox" class="search-box" placeholder="搜索内容、作者...">
             
-            <div class="filter-buttons">
-                <button class="filter-btn active" data-filter="all">全部</button>
-                <button class="filter-btn" data-filter="images">有图片</button>
-                <button class="filter-btn" data-filter="recent">最近</button>
+            <div class="filter-group">
+                <select id="authorFilter" class="author-select">
+                    <option value="all-authors">所有作者</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">筛选:</span>
+                <div class="filter-buttons" id="content-filters">
+                    <button class="filter-btn active" data-filter="all-content">全部</button>
+                    <button class="filter-btn" data-filter="images">有图推文</button>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">时间:</span>
+                <div class="filter-buttons" id="time-filters">
+                    <button class="filter-btn active" data-filter="all-time">全部时间</button>
+                    <button class="filter-btn" data-filter="today">今天</button>
+                    <button class="filter-btn" data-filter="week">本周</button>
+                    <button class="filter-btn" data-filter="month">本月</button>
+                </div>
             </div>
         </div>
 

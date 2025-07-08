@@ -3,7 +3,12 @@ class TweetBrowser {
         this.tweets = [];
         this.filteredTweets = [];
         this.loadedFileIds = new Set();
-        this.currentFilter = 'all';
+        this.filters = {
+            searchQuery: '',
+            author: 'all-authors',
+            content: 'all-content', // 'all-content', 'images'
+            time: 'all-time'      // 'all-time', 'today', 'week', 'month'
+        };
         this.init();
     }
 
@@ -23,14 +28,32 @@ class TweetBrowser {
             this.loadFiles(e.target.files);
         });
 
-        document.getElementById('searchBox').addEventListener('input', (e) => {
-            this.searchTweets(e.target.value);
+        document.getElementById('authorFilter').addEventListener('change', (e) => {
+            this.filters.author = e.target.value;
+            this.applyFilters();
         });
 
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.setFilter(e.target.dataset.filter);
-            });
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            this.filters.searchQuery = e.target.value.toLowerCase();
+            this.applyFilters();
+        });
+
+        document.getElementById('content-filters').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                this.filters.content = e.target.dataset.filter;
+                document.querySelectorAll('#content-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                this.applyFilters();
+            }
+        });
+
+        document.getElementById('time-filters').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                this.filters.time = e.target.dataset.filter;
+                document.querySelectorAll('#time-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                this.applyFilters();
+            }
         });
     }
 
@@ -79,9 +102,10 @@ class TweetBrowser {
             }
 
             this.tweets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // 最终的数据处理流程
             this.updateStats();
-            this.filterTweets();
-            this.renderTweets();
+            this.applyFilters();
 
             let message = `您选择了 ${files.length} 个文件。`;
             if (loadedCount > 0) {
@@ -110,7 +134,12 @@ class TweetBrowser {
     parseFile(content, filename) {
         try {
             if (filename.endsWith('.json')) {
-                return JSON.parse(content);
+                const data = JSON.parse(content);
+                // 确保时间戳存在且有效
+                if (!data.timestamp && data.tweetTime) {
+                    data.timestamp = data.tweetTime;
+                }
+                return data;
             } else if (filename.endsWith('.html')) {
                 return this.parseHTMLFile(content);
             }
@@ -121,25 +150,38 @@ class TweetBrowser {
     }
 
     parseHTMLFile(html) {
-        // 简单的HTML解析，从文件名或内容中提取信息
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // 尝试从HTML中提取推文信息
-        const userNameEl = doc.querySelector('.user-details h3, .user-name');
+        const userNameEl = doc.querySelector('.user-details h3, .user-name, .user-info h4');
         const userHandleEl = doc.querySelector('.user-handle');
-        const tweetTextEl = doc.querySelector('.tweet-text');
-        const images = Array.from(doc.querySelectorAll('.media-container img')).map(img => img.src);
+        const tweetTextEl = doc.querySelector('.tweet-text, .tweet-text-full');
+        const images = Array.from(doc.querySelectorAll('.media-container img, .tweet-media img')).map(img => img.src);
         
+        // 尝试从多个可能的元素和属性中解析时间
+        let timestamp = new Date().toISOString(); // Default to now if not found
+        const timeEl = doc.querySelector('time[datetime], .tweet-timestamp, .time');
+        if (timeEl) {
+            const timeString = timeEl.getAttribute('datetime') || timeEl.textContent;
+            const parsedDate = new Date(timeString);
+            if (!isNaN(parsedDate)) {
+                timestamp = parsedDate.toISOString();
+            }
+        }
+
         return {
             userName: userNameEl ? userNameEl.textContent.trim() : '未知用户',
-            userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '') : '',
+            userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
             text: tweetTextEl ? tweetTextEl.textContent.trim() : '',
-            timestamp: new Date().toISOString(),
+            timestamp: timestamp,
             media: { images: images, videos: [] },
-            stats: { replies: '0', retweets: '0', likes: '0' },
-            tweetUrl: '',
-            url: ''
+            stats: { 
+                replies: doc.querySelector('.replies')?.textContent || '0',
+                retweets: doc.querySelector('.retweets, .retweet-count')?.textContent || '0',
+                likes: doc.querySelector('.likes, .like-count')?.textContent || '0'
+            },
+            tweetUrl: doc.querySelector('a.tweet-link')?.href || '',
+            url: '' // url is often the same as tweetUrl, can be refined
         };
     }
 
@@ -167,46 +209,51 @@ class TweetBrowser {
         document.getElementById('dateRange').textContent = dateRange;
     }
 
-    setFilter(filter) {
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+    applyFilters() {
+        // Step 1: 在所有过滤操作之前，更新作者列表UI
+        this.updateAuthorFilter();
         
-        this.currentFilter = filter;
-        this.filterTweets();
-        this.renderTweets();
-    }
+        let result = [...this.tweets];
 
-    filterTweets() {
-        this.filteredTweets = this.tweets.filter(tweet => {
-            switch (this.currentFilter) {
-                case 'images':
-                    return tweet.media && tweet.media.images && tweet.media.images.length > 0;
-                case 'recent':
-                    const weekAgo = new Date();
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    return new Date(tweet.timestamp) > weekAgo;
-                default:
-                    return true;
-            }
-        });
-    }
+        // Step 2: 应用所有筛选条件
+        // 作者过滤
+        if (this.filters.author !== 'all-authors') {
+            result = result.filter(tweet => tweet.userHandle === this.filters.author);
+        }
+        // 搜索查询过滤
+        if (this.filters.searchQuery) {
+            result = result.filter(tweet => {
+                const query = this.filters.searchQuery;
+                return (tweet.text && tweet.text.toLowerCase().includes(query)) ||
+                       (tweet.userName && tweet.userName.toLowerCase().includes(query)) ||
+                       (tweet.userHandle && tweet.userHandle.toLowerCase().includes(query));
+            });
+        }
+        // 内容过滤
+        if (this.filters.content === 'images') {
+            result = result.filter(tweet => tweet.media && tweet.media.images && tweet.media.images.length > 0);
+        }
+        // 时间过滤
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    searchTweets(query) {
-        if (!query.trim()) {
-            this.filterTweets();
-            this.renderTweets();
-            return;
+        switch (this.filters.time) {
+            case 'today':
+                result = result.filter(tweet => new Date(tweet.timestamp) >= today);
+                break;
+            case 'week':
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // 本周一
+                result = result.filter(tweet => new Date(tweet.timestamp) >= startOfWeek);
+                break;
+            case 'month':
+                const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                result = result.filter(tweet => new Date(tweet.timestamp) >= startOfMonth);
+                break;
         }
 
-        const searchQuery = query.toLowerCase();
-        this.filteredTweets = this.tweets.filter(tweet => {
-            return tweet.text.toLowerCase().includes(searchQuery) ||
-                   tweet.userName.toLowerCase().includes(searchQuery) ||
-                   tweet.userHandle.toLowerCase().includes(searchQuery);
-        });
-
+        // Step 3: 更新过滤后的推文列表并渲染
+        this.filteredTweets = result;
         this.renderTweets();
     }
 
@@ -291,21 +338,16 @@ class TweetBrowser {
         if (!tweetToDelete) return;
 
         const sourceFileId = tweetToDelete.sourceFileId;
-
-        // 移除推文
         this.tweets = this.tweets.filter(t => t.id !== tweetId);
 
-        // 检查是否还有其他推文来自同一个源文件
         const remainingTweetsFromSource = this.tweets.some(t => t.sourceFileId === sourceFileId);
-
-        // 如果没有了，就从已加载文件列表中移除该文件ID
         if (!remainingTweetsFromSource && sourceFileId) {
             this.loadedFileIds.delete(sourceFileId);
         }
-
-        this.filterTweets();
-        this.renderTweets();
+        
+        // 最终的数据处理流程
         this.updateStats();
+        this.applyFilters();
         this.showNotification('推文已删除。');
     }
 
@@ -340,6 +382,33 @@ class TweetBrowser {
         `;
 
         modal.style.display = 'block';
+    }
+
+    updateAuthorFilter() {
+        const authorFilter = document.getElementById('authorFilter');
+        const authors = [...new Set(this.tweets.map(t => t.userHandle).filter(Boolean))];
+        const selectedAuthor = authorFilter.value;
+
+        authorFilter.innerHTML = '<option value="all-authors">所有作者</option>';
+        
+        authors.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        authors.forEach(author => {
+            const option = document.createElement('option');
+            option.value = author;
+            option.textContent = author;
+            authorFilter.appendChild(option);
+        });
+
+        // 仅更新UI，不触发任何副作用
+        if (authors.includes(selectedAuthor)) {
+            authorFilter.value = selectedAuthor;
+        } else {
+            authorFilter.value = 'all-authors';
+            // 如果之前选中的作者被删，重置筛选状态，下次applyFilters时会自动生效
+            if (this.filters.author !== 'all-authors') {
+                this.filters.author = 'all-authors';
+            }
+        }
     }
 }
 
