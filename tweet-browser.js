@@ -177,9 +177,9 @@ class TweetBrowser {
             timestamp: timestamp,
             media: { images: images, videos: [] },
             stats: { 
-                replies: doc.querySelector('.replies')?.textContent || '0',
-                retweets: doc.querySelector('.retweets, .retweet-count')?.textContent || '0',
-                likes: doc.querySelector('.likes, .like-count')?.textContent || '0'
+                replies: doc.querySelector('.tweet-stats .stat-item:nth-child(1) .stat-number')?.textContent.trim() || '0',
+                retweets: doc.querySelector('.tweet-stats .stat-item:nth-child(2) .stat-number')?.textContent.trim() || '0',
+                likes: doc.querySelector('.tweet-stats .stat-item:nth-child(3) .stat-number')?.textContent.trim() || '0'
             },
             tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
             url: '' // url is often the same as tweetUrl, can be refined
