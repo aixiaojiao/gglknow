@@ -2,6 +2,7 @@ class TweetBrowser {
     constructor() {
         this.tweets = [];
         this.filteredTweets = [];
+        this.loadedFileNames = new Set();
         this.currentFilter = 'all';
         this.init();
     }
@@ -26,24 +27,41 @@ class TweetBrowser {
         });
     }
 
+    showNotification(message) {
+        const notificationArea = document.getElementById('notification-area');
+        notificationArea.textContent = message;
+        notificationArea.style.opacity = '1';
+
+        setTimeout(() => {
+            notificationArea.style.opacity = '0';
+        }, 5000); // 5秒后自动消失
+    }
+
     async loadFiles(files) {
         if (!files.length) return;
 
         this.showLoading();
-        this.tweets = [];
+        let loadedCount = 0;
+        let skippedCount = 0;
 
         for (let file of files) {
+            if (this.loadedFileNames.has(file.name)) {
+                console.log('Skipping already loaded file:', file.name);
+                skippedCount++;
+                continue;
+            }
+
             try {
                 const content = await this.readFile(file);
                 const parsedData = this.parseFile(content, file.name);
                 if (parsedData) {
                     if (Array.isArray(parsedData)) {
-                        // Handle JSON file with an array of tweets
                         this.tweets.push(...parsedData);
                     } else {
-                        // Handle HTML file or JSON with a single tweet object
                         this.tweets.push(parsedData);
                     }
+                    this.loadedFileNames.add(file.name);
+                    loadedCount++;
                 }
             } catch (error) {
                 console.error('读取文件失败:', file.name, error);
@@ -54,6 +72,16 @@ class TweetBrowser {
         this.updateStats();
         this.filterTweets();
         this.renderTweets();
+
+        // 显示加载结果通知
+        let message = `您选择了 ${files.length} 个文件。`;
+        if (loadedCount > 0) {
+            message += ` ${loadedCount} 个新文件加载成功。`;
+        }
+        if (skippedCount > 0) {
+            message += ` ${skippedCount} 个文件因重复被跳过。`;
+        }
+        this.showNotification(message);
     }
 
     readFile(file) {

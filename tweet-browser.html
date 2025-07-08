@@ -326,14 +326,30 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        #notification-area {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <header class="header">
             <h1>推文收藏浏览器</h1>
-            <p>管理和浏览你收藏的Twitter推文</p>
-        </div>
+            <p>本地查看、搜索和管理您收藏的推文</p>
+        </header>
+
+        <div id="notification-area"></div>
 
         <div class="controls">
             <div class="file-input-container">
