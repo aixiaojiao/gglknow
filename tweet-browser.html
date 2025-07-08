@@ -468,7 +468,21 @@
     <div id="modal" class="modal">
         <div class="modal-content">
             <button class="modal-close" id="modalCloseBtn">&times;</button>
-            <div id="modalContent"></div>
+            <div id="modalContent">
+                <div id="modalTweetMedia" class="modal-tweet-media"></div>
+
+                <div class="modal-tweet-stats">
+                    <div><span id="modalReplies"></span> 回复</div>
+                    <div><span id="modalRetweets"></span> 转推</div>
+                    <div><span id="modalLikes"></span> 点赞</div>
+                </div>
+
+                <div class="modal-footer">
+                    <a id="modalTweetLink" href="#" class="view-original-btn" target="_blank" rel="noopener noreferrer">
+                        🔗 查看原始推文
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 

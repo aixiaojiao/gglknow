@@ -157,6 +157,7 @@ class TweetBrowser {
         const userHandleEl = doc.querySelector('.user-handle');
         const tweetTextEl = doc.querySelector('.tweet-text, .tweet-text-full');
         const images = Array.from(doc.querySelectorAll('.media-container img, .tweet-media img')).map(img => img.src);
+        const tweetUrlEl = doc.querySelector('.view-original-btn');
         
         // 尝试从多个可能的元素和属性中解析时间
         let timestamp = new Date().toISOString(); // Default to now if not found
@@ -180,7 +181,7 @@ class TweetBrowser {
                 retweets: doc.querySelector('.retweets, .retweet-count')?.textContent || '0',
                 likes: doc.querySelector('.likes, .like-count')?.textContent || '0'
             },
-            tweetUrl: doc.querySelector('a.tweet-link')?.href || '',
+            tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
             url: '' // url is often the same as tweetUrl, can be refined
         };
     }
@@ -382,6 +383,19 @@ class TweetBrowser {
         `;
 
         modal.style.display = 'block';
+
+        document.getElementById('modalRetweets').textContent = tweet.stats?.retweets || '0';
+        document.getElementById('modalLikes').textContent = tweet.stats?.likes || '0';
+
+        const tweetLink = document.getElementById('modalTweetLink');
+        if (tweet.tweetUrl) {
+            tweetLink.href = tweet.tweetUrl;
+            tweetLink.style.display = 'inline-block';
+        } else {
+            tweetLink.style.display = 'none';
+        }
+        
+        document.getElementById('tweetDetailModal').style.display = 'block';
     }
 
     updateAuthorFilter() {

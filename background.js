@@ -323,22 +323,25 @@ class TwitterCollectorBackground {
             transform: translateY(-2px);
         }
         .footer {
-            background: #f8f9fa;
-            padding: 20px 24px;
+            padding-top: 20px;
+            margin-top: 20px;
             border-top: 1px solid #e1e8ed;
-            text-align: center;
-        }
-        .footer p {
-            color: #657786;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 12px;
-            margin-bottom: 4px;
+            color: #657786;
         }
-        .footer a {
+        .view-original-btn {
             color: #1da1f2;
             text-decoration: none;
+            font-weight: bold;
         }
-        .footer a:hover {
+        .view-original-btn:hover {
             text-decoration: underline;
+        }
+        .timestamp {
+            opacity: 0.9;
         }
         @media (max-width: 768px) {
             body {
@@ -378,7 +381,7 @@ class TwitterCollectorBackground {
                 </div>
             </div>
             
-            <div class="tweet-text">${this.escapeHtml(tweetData.text || '[无文字内容]')}</div>
+            <p class="tweet-text">${this.escapeHtml(tweetData.text || '[无文字内容]')}</p>
             
             ${tweetData.media && tweetData.media.images && tweetData.media.images.length > 0 ? `
             <div class="media-container">
@@ -415,10 +418,11 @@ class TwitterCollectorBackground {
                 </div>
             </div>
             
-            <div class="action-buttons">
-                <a href="${tweetData.tweetUrl || '#'}" class="btn btn-primary" target="_blank">
-                    🔗 查看原推文
+            <div class="footer">
+                <a href="${tweetData.tweetUrl || '#'}" class="view-original-btn" target="_blank" rel="noopener noreferrer">
+                    🔗 查看原始推文
                 </a>
+                <span class="timestamp">收藏于: ${new Date(tweetData.timestamp).toLocaleString('zh-CN')}</span>
             </div>
         </div>
         

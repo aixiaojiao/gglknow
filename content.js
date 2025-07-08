@@ -307,31 +307,13 @@ class TwitterCollector {
         videos: videos
       };
 
-      // 提取推文链接
-      const tweetLinkSelectors = [
-        'a[href*="/status/"]',
-        'a[href*="/tweet/"]',
-        'time'
-      ];
-      
-      let tweetLink = null;
-      for (const selector of tweetLinkSelectors) {
-        const element = tweetElement.querySelector(selector);
-        if (element) {
-          if (element.tagName === 'TIME') {
-            tweetLink = element.closest('a');
-          } else {
-            tweetLink = element;
-          }
-          if (tweetLink && tweetLink.getAttribute('href')) {
-            break;
-          }
+      // 提取推文链接 (更简洁、可靠的方式)
+      const timeEl = tweetElement.querySelector('time[datetime]');
+      if (timeEl) {
+        const linkEl = timeEl.closest('a');
+        if (linkEl && linkEl.href) {
+          data.tweetUrl = linkEl.href;
         }
-      }
-      
-      if (tweetLink) {
-        const href = tweetLink.getAttribute('href');
-        data.tweetUrl = href.startsWith('http') ? href : 'https://twitter.com' + href;
       } else {
         data.tweetUrl = '';
       }
