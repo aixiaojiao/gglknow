@@ -2,7 +2,8 @@ class TweetBrowser {
     constructor() {
         this.tweets = [];
         this.filteredTweets = [];
-        this.loadedFileIds = new Set();
+        this.fileMap = new Map();
+        this.objectUrls = [];
         this.filters = {
             searchQuery: '',
             author: 'all-authors',
@@ -72,54 +73,47 @@ class TweetBrowser {
 
         try {
             this.showLoading();
+            this.clearPreviousData();
+
+            this.fileMap = new Map(Array.from(files).map(file => [file.webkitRelativePath, file]));
+            
+            const htmlFiles = Array.from(files).filter(file => file.name.endsWith('.html'));
             let loadedCount = 0;
-            let skippedCount = 0;
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const fileId = `${file.name}-${file.size}-${file.lastModified}`;
-                if (this.loadedFileIds.has(fileId)) {
-                    skippedCount++;
-                    continue;
-                }
-
+            for (const file of htmlFiles) {
                 try {
                     const content = await this.readFile(file);
-                    const parsedData = this.parseFile(content, file.name);
+                    const parsedData = this.parseHTMLFile(content, file.webkitRelativePath);
                     if (parsedData) {
-                        const tweetsToAdd = Array.isArray(parsedData) ? parsedData : [parsedData];
-                        tweetsToAdd.forEach(tweet => {
-                            tweet.id = `tweet-${this.tweets.length}-${Date.now()}`;
-                            tweet.sourceFileId = fileId;
-                            this.tweets.push(tweet);
-                        });
-                        this.loadedFileIds.add(fileId);
+                        const tweet = await this.resolveMediaPaths(parsedData);
+                        tweet.id = `tweet-${this.tweets.length}-${Date.now()}`;
+                        this.tweets.push(tweet);
                         loadedCount++;
                     }
                 } catch (error) {
-                    console.error(`Failed to read or parse file ${file.name}:`, error);
+                    console.error(`处理文件 ${file.name} 失败:`, error);
                 }
             }
 
             this.tweets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             
-            // 最终的数据处理流程
             this.updateStats();
             this.applyFilters();
 
-            let message = `您选择了 ${files.length} 个文件。`;
-            if (loadedCount > 0) {
-                message += ` ${loadedCount} 个新文件加载成功。`;
-            }
-            if (skippedCount > 0) {
-                message += ` ${skippedCount} 个文件因重复被跳过。`;
-            }
-            this.showNotification(message);
+            this.showNotification(`成功加载 ${loadedCount} 条推文。`);
 
         } catch (fatalError) {
-            console.error('A critical error occurred during the file loading process:', fatalError);
+            console.error('加载文件时发生严重错误:', fatalError);
             this.showNotification('加载过程中发生严重错误，请检查控制台。');
         }
+    }
+
+    clearPreviousData() {
+        this.tweets = [];
+        this.filteredTweets = [];
+        this.fileMap.clear();
+        this.objectUrls.forEach(url => URL.revokeObjectURL(url));
+        this.objectUrls = [];
     }
 
     readFile(file) {
@@ -141,7 +135,7 @@ class TweetBrowser {
                 }
                 return data;
             } else if (filename.endsWith('.html')) {
-                return this.parseHTMLFile(content);
+                return this.parseHTMLFile(content, filename);
             }
         } catch (error) {
             console.error('解析文件失败:', filename, error);
@@ -149,41 +143,100 @@ class TweetBrowser {
         return null;
     }
 
-    parseHTMLFile(html) {
+    parseHTMLFile(html, filePath) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        const userNameEl = doc.querySelector('.user-details h3, .user-name, .user-info h4');
+        const userNameEl = doc.querySelector('.user-details h3');
         const userHandleEl = doc.querySelector('.user-handle');
-        const tweetTextEl = doc.querySelector('.tweet-text, .tweet-text-full');
-        const images = Array.from(doc.querySelectorAll('.media-container img, .tweet-media img')).map(img => img.src);
+        const tweetTextEl = doc.querySelector('.tweet-text');
+        const imageEls = Array.from(doc.querySelectorAll('.media-container img'));
         const tweetUrlEl = doc.querySelector('.view-original-btn');
+        const avatarImgEl = doc.querySelector('.user-avatar img');
         
-        // 尝试从多个可能的元素和属性中解析时间
-        let timestamp = new Date().toISOString(); // Default to now if not found
-        const timeEl = doc.querySelector('time[datetime], .tweet-timestamp, .time');
-        if (timeEl) {
-            const timeString = timeEl.getAttribute('datetime') || timeEl.textContent;
-            const parsedDate = new Date(timeString);
-            if (!isNaN(parsedDate)) {
-                timestamp = parsedDate.toISOString();
+        const getRelativePath = (src) => {
+            try {
+                // 如果src是完整的file:/// URL，提取其路径
+                const url = new URL(src);
+                if (url.protocol === 'file:') {
+                    return decodeURIComponent(url.pathname.substring(1));
+                }
+            } catch (e) {
+                // 如果src已经是相对路径，则基于当前HTML文件的路径进行解析
+                const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+                return `${dir}/${src}`;
             }
+            return src; // Fallback
+        };
+
+        let timestamp = new Date().toISOString();
+        const timeEl = doc.querySelector('time[datetime]');
+        if (timeEl) {
+            timestamp = timeEl.getAttribute('datetime');
+        } else {
+             const metaCardPs = doc.querySelectorAll('.meta-card p');
+             if (metaCardPs.length > 0) {
+                 const date = new Date(metaCardPs[0].textContent);
+                 if (!isNaN(date)) timestamp = date.toISOString();
+             }
         }
 
         return {
             userName: userNameEl ? userNameEl.textContent.trim() : '未知用户',
             userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
-            text: tweetTextEl ? tweetTextEl.textContent.trim() : '',
+            text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
             timestamp: timestamp,
-            media: { images: images, videos: [] },
+            userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src')) : '',
+            media: { 
+                images: imageEls.map(img => getRelativePath(img.getAttribute('src'))), 
+                videos: [] 
+            },
             stats: { 
                 replies: doc.querySelector('.tweet-stats .stat-item:nth-child(1) .stat-number')?.textContent.trim() || '0',
                 retweets: doc.querySelector('.tweet-stats .stat-item:nth-child(2) .stat-number')?.textContent.trim() || '0',
                 likes: doc.querySelector('.tweet-stats .stat-item:nth-child(3) .stat-number')?.textContent.trim() || '0'
             },
             tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
-            url: '' // url is often the same as tweetUrl, can be refined
+            url: ''
         };
+    }
+    
+    async resolveMediaPaths(tweetData) {
+        const resolvedTweet = { ...tweetData };
+        resolvedTweet.displayAvatarUrl = '';
+        resolvedTweet.displayImageUrls = [];
+
+        const findFile = (path) => {
+            // 尝试直接匹配和移除开头的项目文件夹名称后匹配
+            const normalizedPath = path.replace(/\\/g, '/');
+            const pathParts = normalizedPath.split('/');
+            const key = pathParts.slice(1).join('/'); // 移除根文件夹
+            return this.fileMap.get(normalizedPath) || this.fileMap.get(key);
+        };
+        
+        // 解析头像
+        if (tweetData.userAvatarUrl) {
+            const file = findFile(tweetData.userAvatarUrl);
+            if (file) {
+                const url = URL.createObjectURL(file);
+                resolvedTweet.displayAvatarUrl = url;
+                this.objectUrls.push(url);
+            }
+        }
+
+        // 解析媒体图片
+        if (tweetData.media?.images?.length > 0) {
+            for (const imagePath of tweetData.media.images) {
+                const file = findFile(imagePath);
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    resolvedTweet.displayImageUrls.push(url);
+                    this.objectUrls.push(url);
+                }
+            }
+        }
+        
+        return resolvedTweet;
     }
 
     updateStats() {
@@ -288,18 +341,22 @@ class TweetBrowser {
             const likes = tweet.stats?.likes || '0';
             const retweets = tweet.stats?.retweets || '0';
 
+            const avatarHtml = tweet.displayAvatarUrl
+                ? `<img src="${tweet.displayAvatarUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover;">`
+                : `<span>${userName.charAt(0).toUpperCase()}</span>`;
+
             card.innerHTML = `
                 <button class="delete-btn" data-tweet-id="${tweet.id}">&times;</button>
                 <div class="tweet-user">
                     <div class="user-avatar">
-                        ${userName.charAt(0).toUpperCase()}
+                        ${avatarHtml}
                     </div>
                     <div class="user-info">
-                        <h4>${userName}</h4>
-                        <span class="user-handle">@${userHandle}</span>
+                        <h4>${this.escapeHtml(userName)}</h4>
+                        <span class="user-handle">@${this.escapeHtml(userHandle)}</span>
                     </div>
                 </div>
-                <p class="tweet-text">${this.escapeHtml(text)}</p>
+                <p class="tweet-text">${text}</p>
                 <div class="tweet-footer">
                     <span>❤️ ${likes}</span>
                     <span>🔁 ${retweets}</span>
@@ -359,14 +416,18 @@ class TweetBrowser {
         const modal = document.getElementById('tweetModal');
         const modalContent = document.getElementById('modalContent');
 
-        const imagesHTML = (tweet.media?.images || [])
+        const imagesHTML = (tweet.displayImageUrls || [])
             .map(src => `<img src="${src}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
             .join('');
+
+        const avatarHtml = tweet.displayAvatarUrl
+            ? `<img src="${tweet.displayAvatarUrl}" alt="${tweet.userName}" class="user-avatar-img">`
+            : `<div class="user-avatar-placeholder">${(tweet.userName || 'U').charAt(0).toUpperCase()}</div>`;
 
         modalContent.innerHTML = `
             <div class="tweet-card" style="box-shadow: none; border: none;">
                 <div class="tweet-user">
-                    <div class="user-avatar">${(tweet.userName || 'U').charAt(0).toUpperCase()}</div>
+                    ${avatarHtml}
                     <div class="user-info">
                         <h4>${tweet.userName || '未知用户'}</h4>
                         <span class="user-handle">@${tweet.userHandle || 'unknown'}</span>
@@ -434,12 +495,16 @@ function showTweetDetail(index) {
     const modal = document.getElementById('modal');
     const modalContent = document.getElementById('modalContent');
     
+    const avatarHtml = tweet.displayAvatarUrl
+        ? `<img src="${tweet.displayAvatarUrl}" alt="${tweet.userName}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px;">`
+        : `<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #1da1f2, #1991db); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; margin-right: 15px;">
+               ${(tweet.userName || 'U').charAt(0).toUpperCase()}
+           </div>`;
+
     modalContent.innerHTML = `
         <div style="padding: 30px;">
             <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #1da1f2, #1991db); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; margin-right: 15px;">
-                    ${tweet.userName.charAt(0).toUpperCase()}
-                </div>
+                ${avatarHtml}
                 <div>
                     <h3 style="margin: 0; color: #14171a;">${browser.escapeHtml(tweet.userName)}</h3>
                     <div style="color: #657786;">@${browser.escapeHtml(tweet.userHandle)}</div>
@@ -447,14 +512,14 @@ function showTweetDetail(index) {
             </div>
             
             <div style="font-size: 18px; line-height: 1.6; color: #14171a; margin-bottom: 20px; white-space: pre-wrap;">
-                ${browser.escapeHtml(tweet.text)}
+                ${tweet.text}
             </div>
             
-            ${tweet.media && tweet.media.images && tweet.media.images.length > 0 ? `
+            ${(tweet.displayImageUrls && tweet.displayImageUrls.length > 0) ? `
                 <div style="margin: 20px 0;">
                     <h4 style="margin-bottom: 10px;">📷 图片</h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                        ${tweet.media.images.map(img => `<img src="${img}" style="width: 100%; border-radius: 8px;" alt="推文图片">`).join('')}
+                        ${tweet.displayImageUrls.map(img => `<img src="${img}" style="width: 100%; border-radius: 8px;" alt="推文图片">`).join('')}
                     </div>
                 </div>
             ` : ''}
