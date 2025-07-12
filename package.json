@@ -1,0 +1,46 @@
+{
+  "name": "gglknow",
+  "version": "1.2.0",
+  "description": "Chrome extension for saving and browsing tweets",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run build:all",
+    "build:all": "npm run clean && tsc && vite build && npm run build:sw && npm run build:popup && npm run build:content && npm run copy:assets",
+    "clean": "rmdir /s /q dist 2>nul || echo \"Dist directory cleaned\"",
+    "build:sw": "rollup -c rollup.sw.config.js",
+    "build:popup": "rollup -c rollup.popup.config.js",
+    "build:content": "rollup -c rollup.content.config.js",
+    "copy:assets": "copy manifest.json dist\\ && copy styles.css dist\\ && xcopy icons dist\\icons\\ /E /I && copy tweet-browser.html dist\\ && copy tweet-browser.js dist\\ && copy debug.html dist\\ && copy help.html dist\\",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.11.17",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "rollup": "^4.44.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0",
+    "vite-plugin-web-extension": "^4.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "twitter",
+    "tweet",
+    "save",
+    "browser"
+  ],
+  "author": "",
+  "license": "MIT"
+}

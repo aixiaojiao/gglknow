@@ -204,7 +204,8 @@ class TwitterCollector {
   extractTweetData(tweetElement) {
     const data = {
       timestamp: new Date().toISOString(),
-      url: window.location.href
+      url: window.location.href,
+      userAvatar: ''
     };
 
     try {
@@ -225,6 +226,12 @@ class TwitterCollector {
         }
       }
       data.userName = userNameElement ? userNameElement.textContent.trim() : '';
+
+      // 新增：提取用户头像URL
+      const avatarImg = tweetElement.querySelector('[data-testid="Tweet-User-Avatar"] img');
+      if (avatarImg && avatarImg.src) {
+        data.userAvatar = avatarImg.src;
+      }
 
       // 提取用户handle
       const userHandleSelectors = [

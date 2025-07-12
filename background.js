@@ -62,17 +62,24 @@ class TwitterCollectorBackground {
       await this.downloadTweetFile(fileName, content, settings.savePath);
       console.log('推文文件下载成功');
       
-      // 如果启用了媒体下载且有媒体文件
-      if (settings.downloadMedia && tweetData.media && 
-          ((tweetData.media.images && tweetData.media.images.length > 0) || 
-           (tweetData.media.videos && tweetData.media.videos.length > 0))) {
-        console.log('开始下载媒体文件...');
-        try {
-          await this.downloadMediaFiles(tweetData, settings.savePath);
-          console.log('媒体文件下载完成');
-        } catch (mediaError) {
-          console.warn('媒体文件下载失败，但推文已保存:', mediaError.message);
-          // 媒体下载失败不影响主要功能
+      // 如果启用了媒体下载
+      if (settings.downloadMedia) {
+        // 准备媒体文件列表，包括头像
+        const mediaToDownload = {
+          images: tweetData.media?.images || [],
+          videos: tweetData.media?.videos || [],
+          avatar: tweetData.userAvatar || null
+        };
+        
+        if (mediaToDownload.images.length > 0 || mediaToDownload.videos.length > 0 || mediaToDownload.avatar) {
+          console.log('开始下载媒体文件...');
+          try {
+            // 注意这里传递的是fileName，作为子目录的基础名称
+            await this.downloadMediaFiles(mediaToDownload, settings.savePath, fileName);
+            console.log('媒体文件下载完成');
+          } catch (mediaError) {
+            console.warn('媒体文件下载失败，但推文已保存:', mediaError.message);
+          }
         }
       }
 
@@ -145,6 +152,19 @@ class TwitterCollectorBackground {
   }
 
   createHTMLContent(tweetData) {
+    let avatarPath = '';
+    // 如果有头像，生成相对于HTML文件的本地路径
+    if (tweetData.userAvatar) {
+        const extension = this.getFileExtension(tweetData.userAvatar) || '.jpg';
+        avatarPath = `./media/avatar${extension}`;
+    }
+
+    // 为媒体图片生成相对路径
+    const mediaPaths = (tweetData.media?.images || []).map((imgUrl, i) => {
+        const extension = this.getFileExtension(imgUrl) || '.jpg';
+        return `./media/image_${i + 1}${extension}`;
+    });
+
     return `
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -202,14 +222,21 @@ class TwitterCollectorBackground {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #1da1f2, #1991db);
+            margin-right: 12px;
+            background: #e1e8ed;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            font-size: 20px;
             font-weight: bold;
-            font-size: 18px;
-            margin-right: 12px;
+            color: #1da1f2;
+            overflow: hidden;
+        }
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         .user-details h3 {
             font-size: 16px;
@@ -373,7 +400,10 @@ class TwitterCollectorBackground {
         <div class="tweet-content">
             <div class="user-info">
                 <div class="user-avatar">
-                    ${this.escapeHtml(tweetData.userName || '用户').charAt(0).toUpperCase()}
+                    ${avatarPath
+                        ? `<img src="${this.escapeHtml(avatarPath)}" alt="User Avatar">`
+                        : `${this.escapeHtml(tweetData.userName || '?').charAt(0).toUpperCase()}`
+                    }
                 </div>
                 <div class="user-details">
                     <h3>${this.escapeHtml(tweetData.userName || '未知用户')}</h3>
@@ -387,7 +417,7 @@ class TwitterCollectorBackground {
             <div class="media-container">
                 <h4>📷 媒体文件</h4>
                 <div class="media-grid">
-                    ${tweetData.media.images.map(img => `<img src="${img}" alt="推文图片" loading="lazy">`).join('')}
+                    ${mediaPaths.map(path => `<img src="${path}" alt="推文图片" loading="lazy">`).join('')}
                 </div>
             </div>
             ` : ''}
@@ -483,7 +513,8 @@ ${mediaSection}
     // 清理文件名和路径
     const cleanFileName = fileName.replace(/[<>:"|?*]/g, '_');
     const cleanPath = savePath.replace(/[<>:"|?*]/g, '_');
-    const fullFileName = `${cleanPath}/${cleanFileName}${extension}`;
+    // **核心改动**：将文件保存在以其文件名命名的子目录中
+    const fullFileName = `${cleanPath}/${cleanFileName}/${cleanFileName}${extension}`;
     
     console.log('准备下载文件:', fullFileName);
     
@@ -528,67 +559,89 @@ ${mediaSection}
     });
   }
 
-  async downloadMediaFiles(tweetData, savePath) {
-    const mediaFolder = `${savePath}/media/${this.generateFileName(tweetData)}`;
+  async downloadMediaFiles(mediaData, savePath, baseFileName) {
+    // **核心改动**：媒体文件保存在与HTML文件同级的media子目录中
+    const mediaFolder = `${savePath}/${baseFileName}/media`;
     
-    // 下载图片
-    if (tweetData.media.images && tweetData.media.images.length > 0) {
-      for (let i = 0; i < tweetData.media.images.length; i++) {
-        const imageUrl = tweetData.media.images[i];
-        const extension = this.getFileExtension(imageUrl) || '.jpg';
-        
+    // 下载头像
+    if (mediaData.avatar) {
+        const extension = this.getFileExtension(mediaData.avatar) || '.jpg';
+        const avatarFileName = `${mediaFolder}/avatar${extension}`;
         try {
-          await new Promise((resolve, reject) => {
-            chrome.downloads.download({
-              url: imageUrl,
-              filename: `${mediaFolder}/image_${i + 1}${extension}`,
-              saveAs: false
-            }, (downloadId) => {
-              if (chrome.runtime.lastError) {
-                console.warn('下载图片失败:', chrome.runtime.lastError.message);
-                resolve(); // 继续下载其他文件
-              } else {
-                resolve(downloadId);
-              }
-            });
-          });
+            await this.downloadFile(mediaData.avatar, avatarFileName);
         } catch (error) {
-          console.warn('下载图片时出错:', error);
+            console.warn(`下载头像失败: ${error.message}`);
+        }
+    }
+
+    // 下载图片
+    if (mediaData.images && mediaData.images.length > 0) {
+      for (let i = 0; i < mediaData.images.length; i++) {
+        const imageUrl = mediaData.images[i];
+        const extension = this.getFileExtension(imageUrl) || '.jpg';
+        const imageFileName = `${mediaFolder}/image_${i + 1}${extension}`;
+        try {
+          await this.downloadFile(imageUrl, imageFileName);
+        } catch (error) {
+          console.warn(`下载图片 ${imageUrl} 失败: ${error.message}`);
         }
       }
     }
 
     // 下载视频
-    if (tweetData.media.videos && tweetData.media.videos.length > 0) {
-      for (let i = 0; i < tweetData.media.videos.length; i++) {
-        const videoUrl = tweetData.media.videos[i];
+    if (mediaData.videos && mediaData.videos.length > 0) {
+      for (let i = 0; i < mediaData.videos.length; i++) {
+        const videoUrl = mediaData.videos[i];
         const extension = this.getFileExtension(videoUrl) || '.mp4';
-        
+        const videoFileName = `${mediaFolder}/video_${i + 1}${extension}`;
         try {
-          await new Promise((resolve, reject) => {
-            chrome.downloads.download({
-              url: videoUrl,
-              filename: `${mediaFolder}/video_${i + 1}${extension}`,
-              saveAs: false
-            }, (downloadId) => {
-              if (chrome.runtime.lastError) {
-                console.warn('下载视频失败:', chrome.runtime.lastError.message);
-                resolve(); // 继续下载其他文件
-              } else {
-                resolve(downloadId);
-              }
-            });
-          });
+          await this.downloadFile(videoUrl, videoFileName);
         } catch (error) {
-          console.warn('下载视频时出错:', error);
+          console.warn(`下载视频 ${videoUrl} 失败: ${error.message}`);
         }
       }
     }
   }
 
+  async downloadFile(url, filename) {
+    return new Promise((resolve, reject) => {
+        chrome.downloads.download({
+            url: url,
+            filename: filename,
+            saveAs: false
+        }, (downloadId) => {
+            if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+            } else if (downloadId) {
+                // 简单的成功/失败处理
+                const listener = (delta) => {
+                    if (delta.id === downloadId) {
+                        if (delta.state && delta.state.current === 'complete') {
+                            chrome.downloads.onChanged.removeListener(listener);
+                            resolve(downloadId);
+                        } else if (delta.state && delta.state.current === 'interrupted') {
+                            chrome.downloads.onChanged.removeListener(listener);
+                            reject(new Error('Download interrupted'));
+                        }
+                    }
+                };
+                chrome.downloads.onChanged.addListener(listener);
+            } else {
+                reject(new Error('Invalid download ID'));
+            }
+        });
+    });
+  }
+
   getFileExtension(url) {
-    const match = url.match(/\.([^.?]+)(\?|$)/);
-    return match ? '.' + match[1] : null;
+    if (!url) return null;
+    try {
+        const pathname = new URL(url).pathname;
+        const match = pathname.match(/\.([^.?]+)$/);
+        return match ? '.' + match[1] : null;
+    } catch(e) {
+        return null;
+    }
   }
 }
 

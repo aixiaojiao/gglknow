@@ -1,30 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "Twitter推文收藏器",
-  "version": "1.1.9",
-  "description": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
+  "name": "GglKnow - Tweet Saver",
+  "version": "1.2.0",
+  "description": "Save and browse tweets locally with media support",
   "permissions": [
-    "activeTab",
     "storage",
-    "downloads"
+    "downloads",
+    "activeTab"
   ],
   "host_permissions": [
     "https://twitter.com/*",
-    "https://x.com/*"
+    "https://x.com/*",
+    "https://pbs.twimg.com/*"
   ],
+  "background": {
+    "service_worker": "background/index.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": ["https://twitter.com/*", "https://x.com/*"],
       "js": ["content/index.js"],
-      "css": ["styles.css"]
+      "run_at": "document_idle"
     }
   ],
-  "background": {
-    "service_worker": "background/index.js"
-  },
   "action": {
-    "default_popup": "src/popup/index.html",
-    "default_title": "Twitter推文收藏器设置",
+    "default_popup": "popup/index.html",
+    "default_title": "GglKnow - Tweet Saver",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -40,8 +42,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["tweet-browser.html", "tweet-browser.js", "debug.html", "help.html"],
+      "resources": ["tweet-browser.html", "tweet-browser.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 } 

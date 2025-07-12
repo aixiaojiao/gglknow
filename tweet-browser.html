@@ -234,6 +234,12 @@
             color: white;
             font-weight: bold;
             margin-right: 10px;
+            overflow: hidden; /* 确保图片不会超出圆形边界 */
+        }
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 确保图片填满容器 */
         }
 
         .user-info h4 {
