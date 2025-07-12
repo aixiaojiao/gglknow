@@ -11,7 +11,7 @@
     "build:sw": "rollup -c rollup.sw.config.js",
     "build:popup": "rollup -c rollup.popup.config.js",
     "build:content": "rollup -c rollup.content.config.js",
-    "copy:assets": "copy manifest.json dist\\ && copy styles.css dist\\ && xcopy icons dist\\icons\\ /E /I && copy tweet-browser.html dist\\ && copy tweet-browser.js dist\\ && copy debug.html dist\\ && copy help.html dist\\",
+    "copy:assets": "copy manifest.json dist\\ && copy styles.css dist\\ && xcopy icons dist\\icons\\ /E /I && copy tweet-browser.html dist\\ && copy tweet-browser.js dist\\",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
