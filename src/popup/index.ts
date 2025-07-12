@@ -41,7 +41,6 @@ class PopupManager {
     formatMarkdown: HTMLInputElement;
     downloadMedia: HTMLInputElement;
     saveBtn: HTMLButtonElement;
-    testBtn: HTMLButtonElement;
     browserBtn: HTMLButtonElement;
     helpBtn: HTMLButtonElement;
     version: HTMLElement;
@@ -66,7 +65,6 @@ class PopupManager {
       formatMarkdown: document.getElementById('formatMarkdown') as HTMLInputElement,
       downloadMedia: document.getElementById('downloadMedia') as HTMLInputElement,
       saveBtn: document.getElementById('saveBtn') as HTMLButtonElement,
-      testBtn: document.getElementById('testBtn') as HTMLButtonElement,
       browserBtn: document.getElementById('browserBtn') as HTMLButtonElement,
       helpBtn: document.getElementById('helpBtn') as HTMLButtonElement,
       version: document.getElementById('version') as HTMLElement
@@ -105,9 +103,6 @@ class PopupManager {
   private setupEventListeners(): void {
     // Save settings button
     this.elements.saveBtn.addEventListener('click', this.handleSaveSettings.bind(this));
-
-    // Test connection button
-    this.elements.testBtn.addEventListener('click', this.handleTestConnection.bind(this));
 
     // Tweet browser button
     this.elements.browserBtn.addEventListener('click', this.handleOpenBrowser.bind(this));
@@ -255,68 +250,39 @@ class PopupManager {
   }
 
   /**
-   * Handle test connection
-   */
-  private async handleTestConnection(): Promise<void> {
-    try {
-      this.elements.testBtn.disabled = true;
-      this.elements.testBtn.textContent = '测试中...';
-      
-      await this.checkConnection();
-      
-      if (this.state.isConnected) {
-        this.showSuccess('连接测试成功');
-      } else {
-        this.showError('连接测试失败');
-      }
-    } catch (error) {
-      log('error', 'PopupManager', 'Connection test failed', error);
-      this.showError('连接测试失败');
-    } finally {
-      this.elements.testBtn.disabled = false;
-      this.elements.testBtn.textContent = '测试连接';
-    }
-  }
-
-  /**
    * Handle open tweet browser
    */
   private handleOpenBrowser(): void {
-    try {
-      openTweetBrowser();
-      window.close();
-    } catch (error) {
-      log('error', 'PopupManager', 'Failed to open tweet browser', error);
-      this.showError('打开推文浏览器失败');
-    }
+    log('info', 'PopupManager', 'Opening tweet browser');
+    openTweetBrowser();
   }
 
   /**
-   * Handle open help
+   * Handle open help page
    */
   private handleOpenHelp(): void {
-    try {
-      openHelpPage();
-      window.close();
-    } catch (error) {
-      log('error', 'PopupManager', 'Failed to open help page', error);
-      this.showError('打开帮助页面失败');
-    }
+    log('info', 'PopupManager', 'Opening help page');
+    openHelpPage();
   }
 
   /**
    * Validate save path input
    */
   private validateSavePathInput(): void {
-    const path = this.elements.savePath.value.trim();
-    const error = validateSavePath(path);
-    
-    if (error) {
-      this.elements.savePath.style.borderColor = '#f44336';
-      this.showError(error);
-    } else {
-      this.elements.savePath.style.borderColor = '#ddd';
-      this.hideStatus();
+    try {
+      const path = this.elements.savePath.value.trim();
+      const error = validateSavePath(path);
+      
+      if (error) {
+        this.elements.savePath.style.borderColor = '#f44336';
+        this.showError(error);
+      } else {
+        this.elements.savePath.style.borderColor = '#ddd';
+        this.hideStatus();
+      }
+    } catch (error) {
+      log('error', 'PopupManager', 'Failed to validate save path input', error);
+      this.showError('保存路径验证失败');
     }
   }
 
