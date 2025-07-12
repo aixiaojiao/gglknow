@@ -10,14 +10,14 @@ import {
     formatTimestamp,
     log
 } from '@/utils';
-import { TweetData, FileGenerationResult } from '@/types';
+import { TweetData, FileGenerationResult, ExtensionSettings } from '@/types';
 
 /**
  * Generate file content based on tweet data and settings
  */
 export async function generateFile(
   tweetData: TweetData, 
-  settings: any // ExtensionSettings is removed, so using 'any' for now
+  settings: ExtensionSettings
 ): Promise<FileGenerationResult> {
   try {
     log('info', 'FileGenerator', `Generating ${settings.fileFormat} file`, {

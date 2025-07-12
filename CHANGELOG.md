@@ -1,6 +1,17 @@
 # 更新日志
 
-### v2.0.0 - 2024-07-27
+所有此项目的显著更改都将记录在此文件中。
+
+格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
+并且本项目遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
+
+## [2.0.1] - 2025-07-12
+
+### 修复 (Fixed)
+
+- 修复了因类型定义不一致导致在选择 "JSON" 或 "Markdown" 格式时收藏失败的问题。现在所有文件格式都能正常生成和保存。
+
+## [2.0.0] - 2024-07-28
 - **🎉 重大重构：TypeScript & 现代化构建**
   - **核心迁移**: 整个扩展从 Vanilla JavaScript 完全重构为 **TypeScript**，提供了强类型支持，增强了代码的健壮性和可维护性。
   - **构建系统**: 引入了基于 **Vite** 和 **Rollup** 的现代化构建流程，替代了之前的手动文件管理。
