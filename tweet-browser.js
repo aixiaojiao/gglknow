@@ -147,12 +147,12 @@ class TweetBrowser {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        const userNameEl = doc.querySelector('.user-details h3');
-        const userHandleEl = doc.querySelector('.user-handle');
+        const userNameEl = doc.querySelector('.user-details h2');
+        const userHandleEl = doc.querySelector('.user-details p');
         const tweetTextEl = doc.querySelector('.tweet-text');
-        const imageEls = Array.from(doc.querySelectorAll('.media-container img'));
+        const imageEls = Array.from(doc.querySelectorAll('.media-item img, .media-item video'));
         const tweetUrlEl = doc.querySelector('.view-original-btn');
-        const avatarImgEl = doc.querySelector('.user-avatar img');
+        const avatarImgEl = doc.querySelector('.avatar');
         
         const getRelativePath = (src, basePath) => {
             if (!src || !basePath) return '';
@@ -169,15 +169,17 @@ class TweetBrowser {
         };
 
         let timestamp = new Date().toISOString();
-        const timeEl = doc.querySelector('.tweet-stats .timestamp, time[datetime]');
+        const timeEl = doc.querySelector('.meta-item span:last-child');
         if (timeEl) {
-            timestamp = timeEl.getAttribute('datetime');
-        } else {
-             const metaCardPs = doc.querySelectorAll('.meta-card p');
-             if (metaCardPs.length > 0) {
-                 const date = new Date(metaCardPs[0].textContent);
-                 if (!isNaN(date)) timestamp = date.toISOString();
-             }
+            const timeText = timeEl.textContent.trim();
+            const date = new Date(timeText);
+             if (!isNaN(date)) timestamp = date.toISOString();
+        }
+
+        const getStat = (label) => {
+            const statElements = Array.from(doc.querySelectorAll('.stat'));
+            const targetStat = statElements.find(el => el.querySelector('.stat-label')?.textContent.trim() === label);
+            return targetStat?.querySelector('.stat-number')?.textContent.trim() || '0';
         }
 
         return {
@@ -187,13 +189,13 @@ class TweetBrowser {
             timestamp: timestamp,
             userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
             media: { 
-                images: imageEls.map(img => getRelativePath(img.getAttribute('src'), filePath)), 
-                videos: [] 
+                images: imageEls.filter(el => el.tagName === 'IMG').map(img => getRelativePath(img.getAttribute('src'), filePath)), 
+                videos: imageEls.filter(el => el.tagName === 'VIDEO').map(vid => getRelativePath(vid.getAttribute('src'), filePath)), 
             },
             stats: { 
-                replies: doc.querySelector('.tweet-stats .stat-item:nth-child(1) .stat-number')?.textContent.trim() || '0',
-                retweets: doc.querySelector('.tweet-stats .stat-item:nth-child(2) .stat-number')?.textContent.trim() || '0',
-                likes: doc.querySelector('.tweet-stats .stat-item:nth-child(3) .stat-number')?.textContent.trim() || '0'
+                replies: getStat('Replies'),
+                retweets: getStat('Retweets'),
+                likes: getStat('Likes')
             },
             tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
             url: ''
