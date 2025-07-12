@@ -1,0 +1,344 @@
+{
+  "extName": {
+    "message": "Twitter Tweet Collector",
+    "description": "The name of the extension."
+  },
+  "extDescription": {
+    "message": "Add a collect button next to Twitter/X tweets to save them to a local folder with one click.",
+    "description": "The description of the extension."
+  },
+  "actionTitle": {
+    "message": "Twitter Tweet Collector Settings",
+    "description": "The title of the browser action, shown on hover."
+  },
+  "popupTitle": {
+    "message": "Tweet Collector Settings",
+    "description": "Title for the popup window."
+  },
+  "popupHeaderDescription": {
+    "message": "Tweet Collector - Settings",
+    "description": "Description in the popup header."
+  },
+  "connectionChecking": {
+    "message": "Checking connection...",
+    "description": "Connection status checking message."
+  },
+  "settingsBasic": {
+    "message": "Basic Settings",
+    "description": "Title for basic settings section."
+  },
+  "settingsSavePath": {
+    "message": "Save Path",
+    "description": "Label for save path input."
+  },
+  "settingsSavePathPlaceholder": {
+    "message": "e.g., Downloads/Twitter",
+    "description": "Placeholder for save path input."
+  },
+  "settingsFileFormat": {
+    "message": "File Formats",
+    "description": "Label for file format checkboxes."
+  },
+  "settingsDownloadMedia": {
+    "message": "Download media (images, videos, avatars)",
+    "description": "Label for download media checkbox."
+  },
+  "actionsSectionTitle": {
+    "message": "Actions",
+    "description": "Title for actions section."
+  },
+  "saveFormatLabel": {
+    "message": "Save Formats",
+    "description": "Label for the file format selection."
+  },
+  "formatHtml": {
+    "message": "HTML",
+    "description": "HTML file format."
+  },
+  "formatMarkdown": {
+    "message": "Markdown",
+    "description": "Markdown file format."
+  },
+  "formatJson": {
+    "message": "JSON",
+    "description": "JSON file format."
+  },
+  "openTweetBrowserButton": {
+    "message": "Tweet Browser",
+    "description": "Button to open the tweet browser."
+  },
+  "openHelpButton": {
+    "message": "Help",
+    "description": "Button to open the help page."
+  },
+  "saveSettingsButton": {
+    "message": "Save Settings",
+    "description": "Button to save settings."
+  },
+  "settingsSavedMessage": {
+    "message": "Settings saved!",
+    "description": "Message shown when settings are saved."
+  },
+  "tweetBrowserTitle": {
+    "message": "Tweet Browser",
+    "description": "Title for the tweet browser page."
+  },
+  "filterTweetsLabel": {
+    "message": "Filter Tweets",
+    "description": "Label for the filter section in tweet browser."
+  },
+  "filterByAuthorLabel": {
+    "message": "Filter by Author",
+    "description": "Label for the author filter."
+  },
+  "allAuthorsOption": {
+    "message": "All Authors",
+    "description": "Option to select all authors."
+  },
+  "searchByContentLabel": {
+    "message": "Search by Content",
+    "description": "Label for the content search input."
+  },
+  "searchPlaceholder": {
+    "message": "Search...",
+    "description": "Placeholder for the search input."
+  },
+  "clearFilterButton": {
+    "message": "Clear Filters",
+    "description": "Button to clear filters."
+  },
+  "exportButton": {
+    "message": "Export",
+    "description": "Button to export data."
+  },
+  "backButton": {
+    "message": "Back",
+    "description": "Button to go back from tweet detail view."
+  },
+  "loadingMessage": {
+    "message": "Loading...",
+    "description": "Loading indicator text."
+  },
+  "contextInvalidatedError": {
+    "message": "Error: Extension context invalidated. Please refresh the page and try again.",
+    "description": "Error message for when the extension context is invalidated."
+  },
+  "errorContextUnavailable": {
+    "message": "Context unavailable, please refresh the page.",
+    "description": "Error message when the extension context is not available."
+  },
+  "errorCannotExtract": {
+    "message": "Could not extract tweet data, please try again later.",
+    "description": "Error message when tweet data cannot be extracted."
+  },
+  "successCollected": {
+    "message": "Collected!",
+    "description": "Success message when a tweet is collected."
+  },
+  "errorUnknown": {
+    "message": "Unknown error",
+    "description": "Generic unknown error message."
+  },
+  "errorRefreshPage": {
+    "message": "Please refresh",
+    "description": "Short error message asking user to refresh."
+  },
+  "errorSettingsNeeded": {
+    "message": "Settings needed",
+    "description": "Short error message indicating settings are required."
+  },
+  "errorNetwork": {
+    "message": "Network error",
+    "description": "Short error message for network issues."
+  },
+  "errorDownloadFailed": {
+    "message": "Download failed",
+    "description": "Short error message for download failures."
+  },
+  "errorExtractionFailed": {
+    "message": "Extraction failed",
+    "description": "Short error message for data extraction failures."
+  },
+  "errorCollectionFailed": {
+    "message": "Collection failed",
+    "description": "Short error message for collection failures."
+  },
+  "errorInitFailed": {
+    "message": "Initialization failed, please refresh the page and try again.",
+    "description": "Error message when popup initialization fails."
+  },
+  "errorLoadSettingsFailed": {
+    "message": "Failed to load settings.",
+    "description": "Error message when loading settings fails."
+  },
+  "connectionOk": {
+    "message": "Connection successful.",
+    "description": "Connection status message."
+  },
+  "connectionFailed": {
+    "message": "Connection failed.",
+    "description": "Connection status message."
+  },
+  "connectionError": {
+    "message": "Connection error.",
+    "description": "Connection status message."
+  },
+  "saving": {
+    "message": "Saving...",
+    "description": "Text on save button when saving."
+  },
+  "settingsSavedSuccess": {
+    "message": "Settings saved successfully.",
+    "description": "Success message when settings are saved."
+  },
+  "errorSaveSettingsFailed": {
+    "message": "Failed to save settings.",
+    "description": "Error message when saving settings fails."
+  },
+  "notifyLoadedTweets": {
+    "message": "Successfully loaded $COUNT$ tweets.",
+    "description": "Notification message when tweets are loaded successfully.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "notifyLoadError": {
+    "message": "A critical error occurred during loading. Please check the console.",
+    "description": "Notification message for a critical loading error."
+  },
+  "unknownUser": {
+    "message": "Unknown User",
+    "description": "Placeholder for an unknown user."
+  },
+  "unknownDate": {
+    "message": "Unknown Date",
+    "description": "Placeholder for an unknown date."
+  },
+  "emptyStateNoMatchesTitle": {
+    "message": "🔍 No matching tweets found",
+    "description": "Title for the empty state when no tweets match filters."
+  },
+  "emptyStateNoMatchesDescription": {
+    "message": "Try adjusting your search or filters",
+    "description": "Description for the empty state when no tweets match filters."
+  },
+  "loadingTweets": {
+    "message": "Loading tweets...",
+    "description": "Message shown when tweets are loading."
+  },
+  "notifyTweetDeleted": {
+    "message": "Tweet deleted.",
+    "description": "Notification that a tweet has been deleted."
+  },
+  "likesStat": {
+    "message": "$COUNT$ Likes",
+    "description": "Likes statistic in tweet detail view.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "123"
+      }
+    }
+  },
+  "retweetsStat": {
+    "message": "$COUNT$ Retweets",
+    "description": "Retweets statistic in tweet detail view.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "45"
+      }
+    }
+  },
+  "tweetBrowserPageTitle": {
+    "message": "Tweet Collection Browser",
+    "description": "The title of the tweet browser page."
+  },
+  "tweetBrowserHeaderDescription": {
+    "message": "View, search, and manage your collected tweets locally.",
+    "description": "The description in the header of the tweet browser page."
+  },
+  "tweetBrowserSelectFolderButton": {
+    "message": "📁 Select Tweet Folder",
+    "description": "Button to select the folder containing tweets."
+  },
+  "tweetBrowserSearchPlaceholder": {
+    "message": "Search content, authors...",
+    "description": "Placeholder for the search box in the tweet browser."
+  },
+  "tweetBrowserFilterLabel": {
+    "message": "Filter:",
+    "description": "Label for content filters."
+  },
+  "tweetBrowserFilterAllContent": {
+    "message": "All",
+    "description": "Filter for all content."
+  },
+  "tweetBrowserFilterWithImages": {
+    "message": "With Images",
+    "description": "Filter for tweets with images."
+  },
+  "tweetBrowserTimeLabel": {
+    "message": "Time:",
+    "description": "Label for time filters."
+  },
+  "tweetBrowserFilterAllTime": {
+    "message": "All Time",
+    "description": "Filter for all time."
+  },
+  "tweetBrowserFilterToday": {
+    "message": "Today",
+    "description": "Filter for today."
+  },
+  "tweetBrowserFilterThisWeek": {
+    "message": "This Week",
+    "description": "Filter for this week."
+  },
+  "tweetBrowserFilterThisMonth": {
+    "message": "This Month",
+    "description": "Filter for this month."
+  },
+  "tweetBrowserStatTotalTweets": {
+    "message": "Total Tweets",
+    "description": "Label for total tweets stat."
+  },
+  "tweetBrowserStatTotalUsers": {
+    "message": "Users",
+    "description": "Label for total users stat."
+  },
+  "tweetBrowserStatTotalImages": {
+    "message": "Images",
+    "description": "Label for total images stat."
+  },
+  "tweetBrowserStatDateRange": {
+    "message": "Date Range",
+    "description": "Label for date range stat."
+  },
+  "tweetBrowserEmptyStateTitle": {
+    "message": "📂 Start browsing your tweet collection",
+    "description": "Title for the empty state in the tweet browser."
+  },
+  "tweetBrowserEmptyStateDescription": {
+    "message": "Click the \"Select Tweet Folder\" button above to select your saved tweet files (JSON or HTML format).<br>Supports selecting multiple files for browsing.",
+    "description": "Description for the empty state in the tweet browser."
+  },
+  "tweetBrowserModalReplies": {
+    "message": "Replies",
+    "description": "Label for replies in the tweet detail modal."
+  },
+  "tweetBrowserModalRetweets": {
+    "message": "Retweets",
+    "description": "Label for retweets in the tweet detail modal."
+  },
+  "tweetBrowserModalLikes": {
+    "message": "Likes",
+    "description": "Label for likes in the tweet detail modal."
+  },
+  "tweetBrowserModalViewOriginal": {
+    "message": "🔗 View Original Tweet",
+    "description": "Link text to view the original tweet."
+  }
+} 

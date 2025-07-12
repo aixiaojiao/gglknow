@@ -10,11 +10,47 @@ class TweetBrowser {
             content: 'all-content', // 'all-content', 'images'
             time: 'all-time'      // 'all-time', 'today', 'week', 'month'
         };
+        this.uiLocale = 'default';
         this.init();
     }
 
     init() {
+        if (typeof chrome !== 'undefined' && chrome.i18n) {
+            this.uiLocale = chrome.i18n.getUILanguage();
+            this.localizePage();
+        }
         this.bindEvents();
+    }
+
+    localizePage() {
+      // Set the language of the document
+      document.documentElement.lang = this.uiLocale;
+
+      // Localize elements with data-i18n attribute for text content
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.dataset.i18n;
+        if (key) {
+          const translatedText = chrome.i18n.getMessage(key);
+          if (translatedText) {
+            if (element.tagName === 'P' && key === 'tweetBrowserEmptyStateDescription') {
+              element.innerHTML = translatedText; // Allow <br> tag
+            } else {
+              element.textContent = translatedText;
+            }
+          }
+        }
+      });
+
+      // Localize elements with data-i18n-placeholder for placeholder attribute
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.dataset.i18nPlaceholder;
+        if (key) {
+          const translatedText = chrome.i18n.getMessage(key);
+          if (translatedText) {
+            element.placeholder = translatedText;
+          }
+        }
+      });
     }
 
     bindEvents() {
@@ -100,11 +136,11 @@ class TweetBrowser {
             this.updateStats();
             this.applyFilters();
 
-            this.showNotification(`成功加载 ${loadedCount} 条推文。`);
+            this.showNotification(chrome.i18n.getMessage('notifyLoadedTweets', [loadedCount.toString()]));
 
         } catch (fatalError) {
             console.error('加载文件时发生严重错误:', fatalError);
-            this.showNotification('加载过程中发生严重错误，请检查控制台。');
+            this.showNotification(chrome.i18n.getMessage('notifyLoadError'));
         }
     }
 
@@ -183,7 +219,7 @@ class TweetBrowser {
         }
 
         return {
-            userName: userNameEl ? userNameEl.textContent.trim() : '未知用户',
+            userName: userNameEl ? userNameEl.textContent.trim() : chrome.i18n.getMessage('unknownUser'),
             userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
             text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
             timestamp: timestamp,
@@ -247,14 +283,14 @@ class TweetBrowser {
         
         let dateRange = '-';
         if (totalTweets > 0) {
-            const dates = this.tweets.map(t => new Date(t.timestamp)).sort();
+            const dates = this.tweets.map(t => new Date(t.timestamp)).sort((a, b) => a - b);
             const oldest = dates[0];
             const newest = dates[dates.length - 1];
             
             if (oldest.getTime() === newest.getTime()) {
-                dateRange = oldest.toLocaleDateString('zh-CN');
+                dateRange = oldest.toLocaleDateString(this.uiLocale);
             } else {
-                dateRange = `${oldest.toLocaleDateString('zh-CN')} - ${newest.toLocaleDateString('zh-CN')}`;
+                dateRange = `${oldest.toLocaleDateString(this.uiLocale)} - ${newest.toLocaleDateString(this.uiLocale)}`;
             }
         }
 
@@ -319,8 +355,8 @@ class TweetBrowser {
         if (this.filteredTweets.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <h3>🔍 没有找到匹配的推文</h3>
-                    <p>尝试调整搜索条件或筛选器</p>
+                    <h3>${chrome.i18n.getMessage('emptyStateNoMatchesTitle')}</h3>
+                    <p>${chrome.i18n.getMessage('emptyStateNoMatchesDescription')}</p>
                 </div>
             `;
             return;
@@ -335,10 +371,10 @@ class TweetBrowser {
             card.dataset.tweetIndex = index;
             card.dataset.tweetId = tweet.id;
 
-            const userName = tweet.userName || '未知用户';
+            const userName = tweet.userName || chrome.i18n.getMessage('unknownUser');
             const userHandle = tweet.userHandle || 'unknown';
             const text = tweet.text || '';
-            const timestamp = tweet.timestamp ? new Date(tweet.timestamp).toLocaleDateString('zh-CN') : '未知日期';
+            const timestamp = tweet.timestamp ? new Date(tweet.timestamp).toLocaleDateString(this.uiLocale) : chrome.i18n.getMessage('unknownDate');
             const likes = tweet.stats?.likes || '0';
             const retweets = tweet.stats?.retweets || '0';
 
@@ -383,7 +419,7 @@ class TweetBrowser {
 
     showLoading() {
         const container = document.getElementById('tweetsContainer');
-        container.innerHTML = '<div class="loading">正在加载推文...</div>';
+        container.innerHTML = `<div class="loading">${chrome.i18n.getMessage('loadingTweets')}</div>`;
     }
 
     escapeHtml(text) {
@@ -407,7 +443,7 @@ class TweetBrowser {
         // 最终的数据处理流程
         this.updateStats();
         this.applyFilters();
-        this.showNotification('推文已删除。');
+        this.showNotification(chrome.i18n.getMessage('notifyTweetDeleted'));
     }
 
     showTweetDetail(index) {
@@ -430,16 +466,16 @@ class TweetBrowser {
                 <div class="tweet-user">
                     ${avatarHtml}
                     <div class="user-info">
-                        <h4>${tweet.userName || '未知用户'}</h4>
+                        <h4>${tweet.userName || chrome.i18n.getMessage('unknownUser')}</h4>
                         <span class="user-handle">@${tweet.userHandle || 'unknown'}</span>
                     </div>
                 </div>
                 <p class="tweet-text-full">${tweet.text || ''}</p>
                 <div class="media-container">${imagesHTML}</div>
                 <div class="tweet-stats">
-                    <span>${tweet.stats?.likes || 0} Likes</span>
-                    <span>${tweet.stats?.retweets || 0} Retweets</span>
-                    <span class="tweet-timestamp">${tweet.timestamp ? new Date(tweet.timestamp).toLocaleString('zh-CN') : ''}</span>
+                    <span>${chrome.i18n.getMessage('likesStat', [tweet.stats?.likes || '0'])}</span>
+                    <span>${chrome.i18n.getMessage('retweetsStat', [tweet.stats?.retweets || '0'])}</span>
+                    <span class="tweet-timestamp">${tweet.timestamp ? new Date(tweet.timestamp).toLocaleString(this.uiLocale) : ''}</span>
                 </div>
             </div>
         `;
@@ -478,7 +514,8 @@ class TweetBrowser {
             .sort(([, nameA], [, nameB]) => nameA.toLowerCase().localeCompare(nameB.toLowerCase()));
 
         // 3. 清空并重新填充下拉列表
-        authorFilter.innerHTML = '<option value="all-authors">所有作者</option>';
+        // Note: The text for 'all-authors' is set via localizePage now
+        authorFilter.innerHTML = `<option value="all-authors" data-i18n="allAuthorsOption">${chrome.i18n.getMessage('allAuthorsOption')}</option>`;
         sortedAuthors.forEach(([handle, name]) => {
             const option = document.createElement('option');
             option.value = handle; // 值是唯一的账号名，用于筛选

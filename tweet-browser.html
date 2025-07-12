@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>推文收藏浏览器</title>
+    <title data-i18n="tweetBrowserPageTitle">Tweet Collection Browser</title>
     <style>
         * {
             margin: 0;
@@ -405,8 +405,8 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>推文收藏浏览器</h1>
-            <p>本地查看、搜索和管理您收藏的推文</p>
+            <h1 data-i18n="tweetBrowserPageTitle">Tweet Collection Browser</h1>
+            <p data-i18n="tweetBrowserHeaderDescription">View, search, and manage your collected tweets locally.</p>
         </header>
 
         <div id="notification-area"></div>
@@ -414,34 +414,34 @@
         <div class="controls">
             <div class="file-input-container">
                 <input type="file" id="fileInput" class="file-input" webkitdirectory directory>
-                <label for="fileInput" class="file-input-label">
-                    📁 选择推文文件夹
+                <label for="fileInput" class="file-input-label" data-i18n="tweetBrowserSelectFolderButton">
+                    📁 Select Tweet Folder
                 </label>
             </div>
             
-            <input type="text" id="searchBox" class="search-box" placeholder="搜索内容、作者...">
+            <input type="text" id="searchBox" class="search-box" data-i18n-placeholder="tweetBrowserSearchPlaceholder">
             
             <div class="filter-group">
                 <select id="authorFilter" class="author-select">
-                    <option value="all-authors">所有作者</option>
+                    <option value="all-authors" data-i18n="allAuthorsOption">All Authors</option>
                 </select>
             </div>
 
             <div class="filter-group">
-                <span class="filter-label">筛选:</span>
+                <span class="filter-label" data-i18n="tweetBrowserFilterLabel">Filter:</span>
                 <div class="filter-buttons" id="content-filters">
-                    <button class="filter-btn active" data-filter="all-content">全部</button>
-                    <button class="filter-btn" data-filter="images">有图推文</button>
+                    <button class="filter-btn active" data-filter="all-content" data-i18n="tweetBrowserFilterAllContent">All</button>
+                    <button class="filter-btn" data-filter="images" data-i18n="tweetBrowserFilterWithImages">With Images</button>
                 </div>
             </div>
 
             <div class="filter-group">
-                <span class="filter-label">时间:</span>
+                <span class="filter-label" data-i18n="tweetBrowserTimeLabel">Time:</span>
                 <div class="filter-buttons" id="time-filters">
-                    <button class="filter-btn active" data-filter="all-time">全部时间</button>
-                    <button class="filter-btn" data-filter="today">今天</button>
-                    <button class="filter-btn" data-filter="week">本周</button>
-                    <button class="filter-btn" data-filter="month">本月</button>
+                    <button class="filter-btn active" data-filter="all-time" data-i18n="tweetBrowserFilterAllTime">All Time</button>
+                    <button class="filter-btn" data-filter="today" data-i18n="tweetBrowserFilterToday">Today</button>
+                    <button class="filter-btn" data-filter="week" data-i18n="tweetBrowserFilterThisWeek">This Week</button>
+                    <button class="filter-btn" data-filter="month" data-i18n="tweetBrowserFilterThisMonth">This Month</button>
                 </div>
             </div>
         </div>
@@ -449,28 +449,27 @@
         <div class="stats" id="stats">
             <div class="stat-card">
                 <span class="stat-number" id="totalTweets">0</span>
-                <span class="stat-label">总推文数</span>
+                <span class="stat-label" data-i18n="tweetBrowserStatTotalTweets">Total Tweets</span>
             </div>
             <div class="stat-card">
                 <span class="stat-number" id="totalUsers">0</span>
-                <span class="stat-label">用户数</span>
+                <span class="stat-label" data-i18n="tweetBrowserStatTotalUsers">Users</span>
             </div>
             <div class="stat-card">
                 <span class="stat-number" id="totalImages">0</span>
-                <span class="stat-label">图片数</span>
+                <span class="stat-label" data-i18n="tweetBrowserStatTotalImages">Images</span>
             </div>
             <div class="stat-card">
                 <span class="stat-number" id="dateRange">-</span>
-                <span class="stat-label">时间范围</span>
+                <span class="stat-label" data-i18n="tweetBrowserStatDateRange">Date Range</span>
             </div>
         </div>
 
         <div class="content">
             <div id="tweetsContainer">
                 <div class="empty-state">
-                    <h3>📂 开始浏览你的推文收藏</h3>
-                    <p>点击上方的"选择推文文件"按钮，选择你保存的推文文件（JSON或HTML格式）<br>
-                    支持批量选择多个文件进行浏览</p>
+                    <h3 data-i18n="tweetBrowserEmptyStateTitle">📂 Start browsing your tweet collection</h3>
+                    <p data-i18n="tweetBrowserEmptyStateDescription">Click the "Select Tweet Folder" button above to select your saved tweet files (JSON or HTML format).<br>Supports selecting multiple files for browsing.</p>
                 </div>
             </div>
         </div>
@@ -484,20 +483,20 @@
                 <div id="modalTweetMedia" class="modal-tweet-media"></div>
 
                 <div class="modal-tweet-stats">
-                    <div><span id="modalReplies"></span> 回复</div>
-                    <div><span id="modalRetweets"></span> 转推</div>
-                    <div><span id="modalLikes"></span> 点赞</div>
+                    <div><span id="modalReplies"></span> <span data-i18n="tweetBrowserModalReplies">Replies</span></div>
+                    <div><span id="modalRetweets"></span> <span data-i18n="tweetBrowserModalRetweets">Retweets</span></div>
+                    <div><span id="modalLikes"></span> <span data-i18n="tweetBrowserModalLikes">Likes</span></div>
                 </div>
 
                 <div class="modal-footer">
-                    <a id="modalTweetLink" href="#" class="view-original-btn" target="_blank" rel="noopener noreferrer">
-                        🔗 查看原始推文
+                    <a id="modalTweetLink" href="#" class="view-original-btn" target="_blank" rel="noopener noreferrer" data-i18n="tweetBrowserModalViewOriginal">
+                        🔗 View Original Tweet
                     </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <script src="tweet-browser.js" defer></script>
+    <script src="tweet-browser.js"></script>
+    <script src="utils/lang-setter.js" defer></script>
 </body>
 </html> 

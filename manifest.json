@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Twitter推文收藏器",
-  "version": "2.0.4",
-  "version_name": "2.0.4",
-  "description": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
+  "name": "__MSG_extName__",
+  "version": "2.1.0",
+  "version_name": "2.1.0",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "permissions": [
     "activeTab",
     "storage",
@@ -25,7 +26,7 @@
   },
   "action": {
     "default_popup": "src/popup/index.html",
-    "default_title": "Twitter推文收藏器设置",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

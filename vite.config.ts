@@ -6,8 +6,7 @@ export default defineConfig({
     emptyOutDir: false,
     rollupOptions: {
       input: {
-        background: 'src/background/index.ts',
-        popup: 'src/popup/index.html'
+        background: 'src/background/index.ts'
       },
       output: {
         entryFileNames: '[name]/index.js',

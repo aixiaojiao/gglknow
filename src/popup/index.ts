@@ -5,7 +5,7 @@
  */
 
 import { ExtensionSettings, PopupState } from '@/types';
-import { log, debounce } from '@/utils';
+import { log, debounce, localizePage } from '@/utils';
 import { 
   getSettings, 
   saveSettings, 
@@ -78,6 +78,9 @@ class PopupManager {
     try {
       log('info', 'PopupManager', 'Initializing popup');
 
+      // Localize page content
+      localizePage();
+
       // Set version
       this.elements.version.textContent = getExtensionVersion();
 
@@ -93,7 +96,7 @@ class PopupManager {
       log('info', 'PopupManager', 'Popup initialized successfully');
     } catch (error) {
       log('error', 'PopupManager', 'Failed to initialize popup', error);
-      this.showError('初始化失败，请刷新页面重试');
+      this.showError(chrome.i18n.getMessage('errorInitFailed'));
     }
   }
 
@@ -141,7 +144,7 @@ class PopupManager {
       log('info', 'PopupManager', 'Settings loaded successfully', settings);
     } catch (error) {
       log('error', 'PopupManager', 'Failed to load settings', error);
-      this.showError('加载设置失败');
+      this.showError(chrome.i18n.getMessage('errorLoadSettingsFailed'));
     }
   }
 
@@ -174,21 +177,21 @@ class PopupManager {
     try {
       log('info', 'PopupManager', 'Checking connection');
       
-      this.updateConnectionStatus('检查连接中...', false);
+      this.updateConnectionStatus(chrome.i18n.getMessage('connectionChecking'), false);
       
       const isConnected = await testConnection();
       this.state.isConnected = isConnected;
       
       if (isConnected) {
-        this.updateConnectionStatus('连接正常', true);
+        this.updateConnectionStatus(chrome.i18n.getMessage('connectionOk'), true);
       } else {
-        this.updateConnectionStatus('连接失败', false);
+        this.updateConnectionStatus(chrome.i18n.getMessage('connectionFailed'), false);
       }
       
       log('info', 'PopupManager', 'Connection check complete', { isConnected });
     } catch (error) {
       log('error', 'PopupManager', 'Connection check failed', error);
-      this.updateConnectionStatus('连接错误', false);
+      this.updateConnectionStatus(chrome.i18n.getMessage('connectionError'), false);
     }
   }
 
@@ -211,7 +214,7 @@ class PopupManager {
       
       this.state.isSaving = true;
       this.elements.saveBtn.disabled = true;
-      this.elements.saveBtn.textContent = '保存中...';
+      this.elements.saveBtn.textContent = chrome.i18n.getMessage('saving');
 
       // Get current form values
       const formats: ('html' | 'markdown' | 'json')[] = [];
@@ -237,15 +240,15 @@ class PopupManager {
       // Update state
       this.state.settings = { ...this.state.settings, ...settings };
       
-      this.showSuccess('设置保存成功');
+      this.showSuccess(chrome.i18n.getMessage('settingsSavedSuccess'));
       log('info', 'PopupManager', 'Settings saved successfully', settings);
     } catch (error) {
       log('error', 'PopupManager', 'Failed to save settings', error);
-      this.showError(error instanceof Error ? error.message : '保存设置失败');
+      this.showError(error instanceof Error ? error.message : chrome.i18n.getMessage('errorSaveSettingsFailed'));
     } finally {
       this.state.isSaving = false;
       this.elements.saveBtn.disabled = false;
-      this.elements.saveBtn.textContent = '保存设置';
+      this.elements.saveBtn.textContent = chrome.i18n.getMessage('saveSettingsButton');
     }
   }
 

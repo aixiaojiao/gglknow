@@ -1,6 +1,6 @@
 {
   "name": "gglknow",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "Chrome extension for saving and browsing tweets",
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "build:sw": "rollup -c rollup.sw.config.js",
     "build:popup": "rollup -c rollup.popup.config.js",
     "build:content": "rollup -c rollup.content.config.js",
-    "copy:assets": "copy manifest.json dist\\ && copy styles.css dist\\ && xcopy icons dist\\icons\\ /E /I && copy tweet-browser.html dist\\ && copy tweet-browser.js dist\\ && copy help.html dist\\",
+    "copy:assets": "copy manifest.json dist\\ && copy styles.css dist\\ && xcopy icons dist\\icons\\ /E /I && copy tweet-browser.html dist\\ && copy tweet-browser.js dist\\ && copy help.html dist\\ && xcopy src\\_locales dist\\_locales\\ /E /I && xcopy src\\popup dist\\src\\popup\\ /E /I",
+    "zip": "powershell.exe -Command \"$version = (Get-Content package.json | ConvertFrom-Json).version; Compress-Archive -Path dist -DestinationPath \"gglknow-v$version-release.zip\" -Force\"",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",

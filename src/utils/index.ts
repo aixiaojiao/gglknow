@@ -245,6 +245,52 @@ export function sendChromeMessage<T>(message: any): Promise<T> {
   });
 }
 
+/**
+ * Localizes the current document by replacing elements with data-i18n attributes.
+ */
+export function localizePage(): void {
+  // Set the language of the document
+  if (typeof chrome !== 'undefined' && chrome.i18n) {
+    document.documentElement.lang = chrome.i18n.getUILanguage();
+  }
+
+  // Localize elements with data-i18n attribute for text content
+  const i18nElements = document.querySelectorAll<HTMLElement>('[data-i18n]');
+  i18nElements.forEach(element => {
+    const key = element.dataset.i18n;
+    if (key) {
+      const translatedText = chrome.i18n.getMessage(key);
+      if (translatedText) {
+        element.textContent = translatedText;
+      }
+    }
+  });
+
+  // Localize elements with data-i18n-placeholder for placeholder attribute
+  const placeholderElements = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-i18n-placeholder]');
+  placeholderElements.forEach(element => {
+    const key = element.dataset.i18nPlaceholder;
+    if (key) {
+      const translatedText = chrome.i18n.getMessage(key);
+      if (translatedText) {
+        element.placeholder = translatedText;
+      }
+    }
+  });
+
+  // Localize elements with data-i18n-title for title attribute
+  const titleElements = document.querySelectorAll<HTMLElement>('[data-i18n-title]');
+  titleElements.forEach(element => {
+    const key = element.dataset.i18nTitle;
+    if (key) {
+      const translatedText = chrome.i18n.getMessage(key);
+      if (translatedText) {
+        element.title = translatedText;
+      }
+    }
+  });
+}
+
 // ===== Error Handling =====
 
 /**

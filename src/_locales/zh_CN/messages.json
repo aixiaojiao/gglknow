@@ -1,0 +1,344 @@
+{
+  "extName": {
+    "message": "Twitter推文收藏器",
+    "description": "扩展程序的名称。"
+  },
+  "extDescription": {
+    "message": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
+    "description": "扩展程序的描述。"
+  },
+  "actionTitle": {
+    "message": "Twitter推文收藏器设置",
+    "description": "浏览器操作的标题，悬停时显示。"
+  },
+  "popupTitle": {
+    "message": "推文采集器设置",
+    "description": "弹出窗口的标题。"
+  },
+  "popupHeaderDescription": {
+    "message": "推文收藏器 - 设置",
+    "description": "弹出窗口头部的描述。"
+  },
+  "connectionChecking": {
+    "message": "检查连接中...",
+    "description": "连接状态检查消息。"
+  },
+  "settingsBasic": {
+    "message": "基本设置",
+    "description": "基本设置部分的标题。"
+  },
+  "settingsSavePath": {
+    "message": "保存路径",
+    "description": "保存路径输入的标签。"
+  },
+  "settingsSavePathPlaceholder": {
+    "message": "例如: Downloads/Twitter",
+    "description": "保存路径输入的占位符。"
+  },
+  "settingsFileFormat": {
+    "message": "文件格式",
+    "description": "文件格式复选框的标签。"
+  },
+  "settingsDownloadMedia": {
+    "message": "下载媒体文件（图片、视频、头像）",
+    "description": "下载媒体复选框的标签。"
+  },
+  "actionsSectionTitle": {
+    "message": "操作",
+    "description": "操作部分的标题。"
+  },
+  "saveFormatLabel": {
+    "message": "保存格式",
+    "description": "文件格式选择的标签。"
+  },
+  "formatHtml": {
+    "message": "HTML",
+    "description": "HTML 文件格式。"
+  },
+  "formatMarkdown": {
+    "message": "Markdown",
+    "description": "Markdown 文件格式。"
+  },
+  "formatJson": {
+    "message": "JSON",
+    "description": "JSON 文件格式。"
+  },
+  "openTweetBrowserButton": {
+    "message": "推文浏览器",
+    "description": "打开推文浏览器的按钮。"
+  },
+  "openHelpButton": {
+    "message": "帮助文档",
+    "description": "打开帮助页面的按钮。"
+  },
+  "saveSettingsButton": {
+    "message": "保存设置",
+    "description": "保存设置的按钮。"
+  },
+  "settingsSavedMessage": {
+    "message": "设置已保存！",
+    "description": "设置保存后显示的消息。"
+  },
+  "tweetBrowserTitle": {
+    "message": "推文浏览器",
+    "description": "推文浏览器页面的标题。"
+  },
+  "filterTweetsLabel": {
+    "message": "筛选推文",
+    "description": "推文浏览器中筛选区域的标签。"
+  },
+  "filterByAuthorLabel": {
+    "message": "按作者筛选",
+    "description": "作者筛选器的标签。"
+  },
+  "allAuthorsOption": {
+    "message": "所有作者",
+    "description": "选择所有作者的选项。"
+  },
+  "searchByContentLabel": {
+    "message": "按内容搜索",
+    "description": "内容搜索框的标签。"
+  },
+  "searchPlaceholder": {
+    "message": "搜索...",
+    "description": "搜索框的占位符。"
+  },
+  "clearFilterButton": {
+    "message": "清空筛选",
+    "description": "清空筛选器的按钮。"
+  },
+  "exportButton": {
+    "message": "导出",
+    "description": "导出数据的按钮。"
+  },
+  "backButton": {
+    "message": "返回",
+    "description": "从推文详情视图返回的按钮。"
+  },
+  "loadingMessage": {
+    "message": "加载中...",
+    "description": "加载指示器的文本。"
+  },
+  "contextInvalidatedError": {
+    "message": "错误：扩展上下文已失效。请刷新页面重试。",
+    "description": "扩展上下文失效时的错误消息。"
+  },
+  "errorContextUnavailable": {
+    "message": "扩展上下文不可用，请刷新页面重试。",
+    "description": "扩展上下文不可用时的错误消息。"
+  },
+  "errorCannotExtract": {
+    "message": "无法提取推文数据，请稍后重试。",
+    "description": "无法提取推文数据时的错误消息。"
+  },
+  "successCollected": {
+    "message": "已收藏！",
+    "description": "成功收藏推文时的消息。"
+  },
+  "errorUnknown": {
+    "message": "未知错误",
+    "description": "通用的未知错误消息。"
+  },
+  "errorRefreshPage": {
+    "message": "请刷新页面",
+    "description": "提示用户刷新的简短错误消息。"
+  },
+  "errorSettingsNeeded": {
+    "message": "需要设置",
+    "description": "表明需要设置的简短错误消息。"
+  },
+  "errorNetwork": {
+    "message": "网络错误",
+    "description": "网络问题的简短错误消息。"
+  },
+  "errorDownloadFailed": {
+    "message": "下载失败",
+    "description": "下载失败的简短错误消息。"
+  },
+  "errorExtractionFailed": {
+    "message": "提取失败",
+    "description": "数据提取失败的简短错误消息。"
+  },
+  "errorCollectionFailed": {
+    "message": "收藏失败",
+    "description": "收藏失败的简短错误消息。"
+  },
+  "errorInitFailed": {
+    "message": "初始化失败，请刷新页面重试。",
+    "description": "弹窗初始化失败时的错误消息。"
+  },
+  "errorLoadSettingsFailed": {
+    "message": "加载设置失败。",
+    "description": "加载设置失败时的错误消息。"
+  },
+  "connectionOk": {
+    "message": "连接正常。",
+    "description": "连接状态消息。"
+  },
+  "connectionFailed": {
+    "message": "连接失败。",
+    "description": "连接状态消息。"
+  },
+  "connectionError": {
+    "message": "连接错误。",
+    "description": "连接状态消息。"
+  },
+  "saving": {
+    "message": "保存中...",
+    "description": "保存时保存按钮上显示的文本。"
+  },
+  "settingsSavedSuccess": {
+    "message": "设置保存成功。",
+    "description": "成功保存设置时的消息。"
+  },
+  "errorSaveSettingsFailed": {
+    "message": "保存设置失败。",
+    "description": "保存设置失败时的错误消息。"
+  },
+  "notifyLoadedTweets": {
+    "message": "成功加载 $COUNT$ 条推文。",
+    "description": "成功加载推文时的通知消息。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "notifyLoadError": {
+    "message": "加载过程中发生严重错误，请检查控制台。",
+    "description": "加载时发生严重错误的通知消息。"
+  },
+  "unknownUser": {
+    "message": "未知用户",
+    "description": "未知用户的占位符。"
+  },
+  "unknownDate": {
+    "message": "未知日期",
+    "description": "未知日期的占位符。"
+  },
+  "emptyStateNoMatchesTitle": {
+    "message": "🔍 没有找到匹配的推文",
+    "description": "没有推文匹配筛选条件时空状态的标题。"
+  },
+  "emptyStateNoMatchesDescription": {
+    "message": "尝试调整搜索条件或筛选器",
+    "description": "没有推文匹配筛选条件时空状态的描述。"
+  },
+  "loadingTweets": {
+    "message": "正在加载推文...",
+    "description": "正在加载推文时显示的消息。"
+  },
+  "notifyTweetDeleted": {
+    "message": "推文已删除。",
+    "description": "推文已删除的通知。"
+  },
+  "likesStat": {
+    "message": "$COUNT$ 个点赞",
+    "description": "推文详情视图中的点赞统计。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "123"
+      }
+    }
+  },
+  "retweetsStat": {
+    "message": "$COUNT$ 次转推",
+    "description": "推文详情视图中的转推统计。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "45"
+      }
+    }
+  },
+  "tweetBrowserPageTitle": {
+    "message": "推文收藏浏览器",
+    "description": "推文浏览器页面的标题。"
+  },
+  "tweetBrowserHeaderDescription": {
+    "message": "本地查看、搜索和管理您收藏的推文",
+    "description": "推文浏览器页面头部的描述。"
+  },
+  "tweetBrowserSelectFolderButton": {
+    "message": "📁 选择推文文件夹",
+    "description": "选择包含推文的文件夹的按钮。"
+  },
+  "tweetBrowserSearchPlaceholder": {
+    "message": "搜索内容、作者...",
+    "description": "推文浏览器中搜索框的占位符。"
+  },
+  "tweetBrowserFilterLabel": {
+    "message": "筛选:",
+    "description": "内容筛选器的标签。"
+  },
+  "tweetBrowserFilterAllContent": {
+    "message": "全部",
+    "description": "所有内容的筛选器。"
+  },
+  "tweetBrowserFilterWithImages": {
+    "message": "有图推文",
+    "description": "带图片推文的筛选器。"
+  },
+  "tweetBrowserTimeLabel": {
+    "message": "时间:",
+    "description": "时间筛选器的标签。"
+  },
+  "tweetBrowserFilterAllTime": {
+    "message": "全部时间",
+    "description": "所有时间的筛选器。"
+  },
+  "tweetBrowserFilterToday": {
+    "message": "今天",
+    "description": "今天的筛选器。"
+  },
+  "tweetBrowserFilterThisWeek": {
+    "message": "本周",
+    "description": "本周的筛选器。"
+  },
+  "tweetBrowserFilterThisMonth": {
+    "message": "本月",
+    "description": "本月的筛选器。"
+  },
+  "tweetBrowserStatTotalTweets": {
+    "message": "总推文数",
+    "description": "总推文数统计的标签。"
+  },
+  "tweetBrowserStatTotalUsers": {
+    "message": "用户数",
+    "description": "总用户数统计的标签。"
+  },
+  "tweetBrowserStatTotalImages": {
+    "message": "图片数",
+    "description": "总图片数统计的标签。"
+  },
+  "tweetBrowserStatDateRange": {
+    "message": "时间范围",
+    "description": "时间范围统计的标签。"
+  },
+  "tweetBrowserEmptyStateTitle": {
+    "message": "📂 开始浏览你的推文收藏",
+    "description": "推文浏览器中空状态的标题。"
+  },
+  "tweetBrowserEmptyStateDescription": {
+    "message": "点击上方的“选择推文文件夹”按钮，选择你保存的推文文件（JSON或HTML格式）<br>支持批量选择多个文件进行浏览。",
+    "description": "推文浏览器中空状态的描述。"
+  },
+  "tweetBrowserModalReplies": {
+    "message": "回复",
+    "description": "推文详情模态框中回复的标签。"
+  },
+  "tweetBrowserModalRetweets": {
+    "message": "转推",
+    "description": "推文详情模态框中转推的标签。"
+  },
+  "tweetBrowserModalLikes": {
+    "message": "点赞",
+    "description": "推文详情模态框中点赞的标签。"
+  },
+  "tweetBrowserModalViewOriginal": {
+    "message": "🔗 查看原始推文",
+    "description": "查看原始推文的链接文本。"
+  }
+} 

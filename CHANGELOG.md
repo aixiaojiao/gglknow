@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并且本项目遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
+## [2.1.0] - 2025-07-12
+
+### ✨ 功能增强
+
+- **国际化支持**: 新增完整的中英文双语支持，使用Chrome扩展的i18n API实现本地化。
+  - 添加了 `src/_locales/` 目录结构，包含英文（en）和简体中文（zh_CN）语言包
+  - 支持344个本地化字符串，覆盖扩展的所有用户界面文本
+  - 自动根据用户浏览器语言设置显示对应语言
+  - 在 `manifest.json` 中配置了 `default_locale` 为英文，并使用 `__MSG_*__` 占位符
+
 ## [2.0.4] - 2025-07-12
 
 ### ✨ 功能增强

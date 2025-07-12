@@ -101,7 +101,7 @@ class TwitterCollector {
 
       // Check extension context
       if (!checkExtensionContext()) {
-        throw new Error('扩展上下文不可用，请刷新页面重试');
+        throw new Error(chrome.i18n.getMessage('errorContextUnavailable'));
       }
 
       // Update button to loading state
@@ -117,7 +117,7 @@ class TwitterCollector {
 
       // Validate extracted data
       if (!tweetData.userName && !tweetData.userHandle && !tweetData.text) {
-        throw new Error('无法提取推文数据，请稍后重试');
+        throw new Error(chrome.i18n.getMessage('errorCannotExtract'));
       }
 
       // Send collection request to background
@@ -135,7 +135,7 @@ class TwitterCollector {
         showTemporaryMessage(
           buttonElement,
           ButtonState.SUCCESS,
-          response.message || '已收藏',
+          response.message || chrome.i18n.getMessage('successCollected'),
           2000
         );
         
@@ -145,7 +145,7 @@ class TwitterCollector {
         });
       } else {
         // Show error state
-        const errorMessage = response?.error || '未知错误';
+        const errorMessage = response?.error || chrome.i18n.getMessage('errorUnknown');
         showTemporaryMessage(
           buttonElement,
           ButtonState.ERROR,
@@ -174,17 +174,17 @@ class TwitterCollector {
    */
   private getShortErrorMessage(errorMessage: string): string {
     if (errorMessage.includes('context invalidated')) {
-      return '请刷新页面';
-    } else if (errorMessage.includes('设置')) {
-      return '需要设置';
-    } else if (errorMessage.includes('网络')) {
-      return '网络错误';
-    } else if (errorMessage.includes('下载')) {
-      return '下载失败';
-    } else if (errorMessage.includes('数据')) {
-      return '提取失败';
+      return chrome.i18n.getMessage('errorRefreshPage');
+    } else if (errorMessage.includes('设置') || errorMessage.toLowerCase().includes('setting')) {
+      return chrome.i18n.getMessage('errorSettingsNeeded');
+    } else if (errorMessage.includes('网络') || errorMessage.toLowerCase().includes('network')) {
+      return chrome.i18n.getMessage('errorNetwork');
+    } else if (errorMessage.includes('下载') || errorMessage.toLowerCase().includes('download')) {
+      return chrome.i18n.getMessage('errorDownloadFailed');
+    } else if (errorMessage.includes('数据') || errorMessage.includes('提取') || errorMessage.toLowerCase().includes('extract')) {
+      return chrome.i18n.getMessage('errorExtractionFailed');
     } else {
-      return '收藏失败';
+      return chrome.i18n.getMessage('errorCollectionFailed');
     }
   }
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GglKnow - Tweet Saver</title>
+  <title data-i18n="popupTitle">Tweet Collector Settings</title>
   <style>
     * {
       box-sizing: border-box;
@@ -304,14 +304,14 @@
   <div class="container">
     <div class="header">
       <h1>GglKnow</h1>
-      <p>推文收藏器 - 设置</p>
+      <p data-i18n="popupHeaderDescription">Tweet Collector - Settings</p>
     </div>
     
     <div class="content">
       <!-- Connection Status -->
       <div class="connection-indicator">
         <div class="connection-dot" id="connectionDot"></div>
-        <span id="connectionStatus">检查连接中...</span>
+        <span id="connectionStatus" data-i18n="connectionChecking">Checking connection...</span>
       </div>
 
       <!-- Status Messages -->
@@ -319,27 +319,27 @@
 
       <!-- Settings Form -->
       <div class="section">
-        <div class="section-title">基本设置</div>
+        <div class="section-title" data-i18n="settingsBasic">Basic Settings</div>
         
         <div class="form-group">
-          <label for="savePath" class="form-label">保存路径</label>
-          <input type="text" id="savePath" class="form-input" placeholder="例如: Downloads/Twitter">
+          <label for="savePath" class="form-label" data-i18n="settingsSavePath">Save Path</label>
+          <input type="text" id="savePath" class="form-input" data-i18n-placeholder="settingsSavePathPlaceholder">
         </div>
 
         <div class="form-group">
-          <label class="form-label">文件格式</label>
+          <label class="form-label" data-i18n="settingsFileFormat">File Formats</label>
           <div class="form-checkbox-group">
             <div class="form-checkbox">
               <input type="checkbox" id="formatHtml" value="html">
-              <label for="formatHtml">HTML</label>
+              <label for="formatHtml" data-i18n="formatHtml">HTML</label>
             </div>
             <div class="form-checkbox">
               <input type="checkbox" id="formatJson" value="json">
-              <label for="formatJson">JSON</label>
+              <label for="formatJson" data-i18n="formatJson">JSON</label>
             </div>
             <div class="form-checkbox">
               <input type="checkbox" id="formatMarkdown" value="markdown">
-              <label for="formatMarkdown">Markdown</label>
+              <label for="formatMarkdown" data-i18n="formatMarkdown">Markdown</label>
             </div>
           </div>
         </div>
@@ -347,21 +347,21 @@
         <div class="form-group">
           <div class="form-checkbox">
             <input type="checkbox" id="downloadMedia">
-            <label for="downloadMedia">下载媒体文件（图片、视频、头像）</label>
+            <label for="downloadMedia" data-i18n="settingsDownloadMedia">Download media (images, videos, avatars)</label>
           </div>
         </div>
       </div>
 
       <!-- Actions -->
       <div class="section">
-        <div class="section-title">操作</div>
+        <div class="section-title" data-i18n="actionsSectionTitle">Actions</div>
         <div class="form-group">
-          <button id="browserBtn" class="button">推文浏览器</button>
+          <button id="browserBtn" class="button" data-i18n="openTweetBrowserButton">Tweet Browser</button>
         </div>
         <div class="form-group">
           <div class="button-group">
-            <button id="helpBtn" class="button secondary">帮助文档</button>
-            <button id="saveBtn" class="button secondary">保存设置</button>
+            <button id="helpBtn" class="button secondary" data-i18n="openHelpButton">Help</button>
+            <button id="saveBtn" class="button secondary" data-i18n="saveSettingsButton">Save Settings</button>
           </div>
         </div>
       </div>
@@ -370,5 +370,6 @@
       <div class="version-info" id="version"></div>
     </div>
     <script src="../../popup-script/index.js"></script>
+    <script src="../../utils/lang-setter.js" defer></script>
   </body>
 </html> 

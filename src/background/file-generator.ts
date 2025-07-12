@@ -16,7 +16,7 @@ import { TweetData, FileGenerationResult } from '@/types';
  * Generate file content based on tweet data and settings
  */
 export async function generateFile(
-  tweetData: TweetData,
+  tweetData: TweetData, 
   format: 'html' | 'markdown' | 'json'
 ): Promise<FileGenerationResult> {
   try {
