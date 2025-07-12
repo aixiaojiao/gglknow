@@ -41,7 +41,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["tweet-browser.html", "tweet-browser.js", "debug.html", "help.html"],
+      "resources": ["tweet-browser.html", "tweet-browser.js"],
       "matches": ["<all_urls>"]
     }
   ]
