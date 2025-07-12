@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Twitter推文收藏器",
-  "version": "2.0.2",
-  "version_name": "2.0.2 - 支持多文件格式同时保存",
+  "version": "2.0.3",
+  "version_name": "2.0.3 - UI优化与帮助文档修复",
   "description": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
   "permissions": [
     "activeTab",
