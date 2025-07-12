@@ -173,8 +173,8 @@ class TwitterCollector {
    * Get short error message for UI display
    */
   private getShortErrorMessage(errorMessage: string): string {
-    if (errorMessage.includes('扩展上下文')) {
-      return '扩展失效';
+    if (errorMessage.includes('context invalidated')) {
+      return '请刷新页面';
     } else if (errorMessage.includes('设置')) {
       return '需要设置';
     } else if (errorMessage.includes('网络')) {

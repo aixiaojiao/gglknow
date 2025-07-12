@@ -10,22 +10,22 @@ import {
     formatTimestamp,
     log
 } from '@/utils';
-import { TweetData, FileGenerationResult, ExtensionSettings } from '@/types';
+import { TweetData, FileGenerationResult } from '@/types';
 
 /**
  * Generate file content based on tweet data and settings
  */
 export async function generateFile(
-  tweetData: TweetData, 
-  settings: ExtensionSettings
+  tweetData: TweetData,
+  format: 'html' | 'markdown' | 'json'
 ): Promise<FileGenerationResult> {
   try {
-    log('info', 'FileGenerator', `Generating ${settings.fileFormat} file`, {
+    log('info', 'FileGenerator', `Generating ${format} file`, {
       user: tweetData.userName,
       hasMedia: tweetData.media.images.length > 0 || tweetData.media.videos.length > 0
     });
     
-    switch (settings.fileFormat) {
+    switch (format) {
       case 'html':
         return generateHTMLFile(tweetData);
       case 'markdown':
@@ -33,7 +33,8 @@ export async function generateFile(
       case 'json':
         return generateJSONFile(tweetData);
       default:
-        throw new Error(`Unsupported file format: ${settings.fileFormat}`);
+        // This case should not be reachable due to TypeScript types
+        throw new Error(`Unsupported file format: ${format}`);
     }
   } catch (error) {
     log('error', 'FileGenerator', 'Failed to generate file', error);

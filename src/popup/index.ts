@@ -24,7 +24,7 @@ class PopupManager {
     isConnected: false,
     settings: {
       savePath: 'Downloads/Twitter',
-      fileFormat: 'html',
+      fileFormats: ['html'],
       downloadMedia: true
     },
     isSaving: false,
@@ -36,7 +36,9 @@ class PopupManager {
     connectionStatus: HTMLElement;
     statusMessage: HTMLElement;
     savePath: HTMLInputElement;
-    fileFormat: HTMLSelectElement;
+    formatHtml: HTMLInputElement;
+    formatJson: HTMLInputElement;
+    formatMarkdown: HTMLInputElement;
     downloadMedia: HTMLInputElement;
     saveBtn: HTMLButtonElement;
     testBtn: HTMLButtonElement;
@@ -59,7 +61,9 @@ class PopupManager {
       connectionStatus: document.getElementById('connectionStatus') as HTMLElement,
       statusMessage: document.getElementById('statusMessage') as HTMLElement,
       savePath: document.getElementById('savePath') as HTMLInputElement,
-      fileFormat: document.getElementById('fileFormat') as HTMLSelectElement,
+      formatHtml: document.getElementById('formatHtml') as HTMLInputElement,
+      formatJson: document.getElementById('formatJson') as HTMLInputElement,
+      formatMarkdown: document.getElementById('formatMarkdown') as HTMLInputElement,
       downloadMedia: document.getElementById('downloadMedia') as HTMLInputElement,
       saveBtn: document.getElementById('saveBtn') as HTMLButtonElement,
       testBtn: document.getElementById('testBtn') as HTMLButtonElement,
@@ -115,7 +119,9 @@ class PopupManager {
     const debouncedSave = debounce(this.handleSaveSettings.bind(this), 1000);
     
     this.elements.savePath.addEventListener('input', debouncedSave);
-    this.elements.fileFormat.addEventListener('change', debouncedSave);
+    this.elements.formatHtml.addEventListener('change', debouncedSave);
+    this.elements.formatJson.addEventListener('change', debouncedSave);
+    this.elements.formatMarkdown.addEventListener('change', debouncedSave);
     this.elements.downloadMedia.addEventListener('change', debouncedSave);
 
     // Save path validation
@@ -149,8 +155,21 @@ class PopupManager {
    */
   private updateSettingsUI(settings: ExtensionSettings): void {
     this.elements.savePath.value = settings.savePath;
-    this.elements.fileFormat.value = settings.fileFormat;
     this.elements.downloadMedia.checked = settings.downloadMedia;
+
+    // Uncheck all first
+    this.elements.formatHtml.checked = false;
+    this.elements.formatJson.checked = false;
+    this.elements.formatMarkdown.checked = false;
+
+    // Check based on settings
+    if (settings.fileFormats) {
+      settings.fileFormats.forEach(format => {
+        if (format === 'html') this.elements.formatHtml.checked = true;
+        if (format === 'json') this.elements.formatJson.checked = true;
+        if (format === 'markdown') this.elements.formatMarkdown.checked = true;
+      });
+    }
   }
 
   /**
@@ -200,9 +219,14 @@ class PopupManager {
       this.elements.saveBtn.textContent = '保存中...';
 
       // Get current form values
+      const formats: ('html' | 'markdown' | 'json')[] = [];
+      if (this.elements.formatHtml.checked) formats.push('html');
+      if (this.elements.formatJson.checked) formats.push('json');
+      if (this.elements.formatMarkdown.checked) formats.push('markdown');
+
       const settings: Partial<ExtensionSettings> = {
         savePath: this.elements.savePath.value.trim(),
-        fileFormat: this.elements.fileFormat.value as 'html' | 'markdown' | 'json',
+        fileFormats: formats,
         downloadMedia: this.elements.downloadMedia.checked
       };
 

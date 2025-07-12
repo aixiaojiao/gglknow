@@ -165,21 +165,23 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
     const filename = generateTweetFilename(tweetData);
     log('info', 'ServiceWorker', 'Generated filename', { filename });
 
-    // Generate file content
-    const fileResult = await generateFile(tweetData, settings);
-    log('info', 'ServiceWorker', 'File content generated', { 
-      size: fileResult.content.length,
-      extension: fileResult.extension 
-    });
+    // Generate and download file for each selected format
+    for (const format of settings.fileFormats) {
+      const fileResult = await generateFile(tweetData, format);
+      log('info', 'ServiceWorker', `File content generated for ${format}`, { 
+        size: fileResult.content.length,
+        extension: fileResult.extension 
+      });
 
-    // Download main tweet file
-    await downloadTweetFile(
-      filename,
-      fileResult.content,
-      settings.savePath,
-      fileResult.extension
-    );
-    log('info', 'ServiceWorker', 'Tweet file downloaded successfully');
+      // Download main tweet file
+      await downloadTweetFile(
+        filename,
+        fileResult.content,
+        settings.savePath,
+        fileResult.extension
+      );
+      log('info', 'ServiceWorker', `Tweet file (${format}) downloaded successfully`);
+    }
 
     let mediaCount = 0;
 

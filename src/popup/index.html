@@ -117,6 +117,11 @@
       cursor: pointer;
     }
 
+    .form-checkbox-group {
+      display: flex;
+      gap: 16px;
+    }
+
     .form-checkbox {
       display: flex;
       align-items: center;
@@ -317,17 +322,26 @@
         <div class="section-title">基本设置</div>
         
         <div class="form-group">
-          <label class="form-label" for="savePath">保存路径</label>
-          <input type="text" id="savePath" class="form-input" placeholder="Downloads/Twitter">
+          <label for="savePath" class="form-label">保存路径</label>
+          <input type="text" id="savePath" class="form-input" placeholder="例如: Downloads/Twitter">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="fileFormat">文件格式</label>
-          <select id="fileFormat" class="form-select">
-            <option value="html">HTML（推荐）</option>
-            <option value="markdown">Markdown</option>
-            <option value="json">JSON</option>
-          </select>
+          <label class="form-label">文件格式</label>
+          <div class="form-checkbox-group">
+            <div class="form-checkbox">
+              <input type="checkbox" id="formatHtml" value="html">
+              <label for="formatHtml">HTML</label>
+            </div>
+            <div class="form-checkbox">
+              <input type="checkbox" id="formatJson" value="json">
+              <label for="formatJson">JSON</label>
+            </div>
+            <div class="form-checkbox">
+              <input type="checkbox" id="formatMarkdown" value="markdown">
+              <label for="formatMarkdown">Markdown</label>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -359,13 +373,8 @@
       </div>
 
       <!-- Version Info -->
-      <div class="version-info">
-        <div>版本 <span id="version">1.2.0</span></div>
-        <div>GglKnow Extension</div>
-      </div>
+      <div class="version-info" id="version"></div>
     </div>
-  </div>
-
-  <script src="../../popup-script/index.js"></script>
-</body>
+    <script src="../../popup-script/index.js"></script>
+  </body>
 </html> 

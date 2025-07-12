@@ -16,14 +16,14 @@ export async function getSettings(): Promise<ExtensionSettings> {
     
     const result = await getChromeStorage<Partial<ExtensionSettings>>([
       'savePath', 
-      'fileFormat', 
+      'fileFormats', 
       'downloadMedia'
     ]);
     
     // Merge with defaults
     const settings: ExtensionSettings = {
       savePath: result.savePath || DEFAULT_SETTINGS.savePath,
-      fileFormat: result.fileFormat || DEFAULT_SETTINGS.fileFormat,
+      fileFormats: result.fileFormats && Array.isArray(result.fileFormats) ? result.fileFormats : DEFAULT_SETTINGS.fileFormats,
       downloadMedia: result.downloadMedia !== undefined ? result.downloadMedia : DEFAULT_SETTINGS.downloadMedia
     };
     

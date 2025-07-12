@@ -63,8 +63,8 @@ export interface TweetData {
 export interface ExtensionSettings {
   /** Directory path where tweets should be saved */
   savePath: string;
-  /** File format for saved tweets */
-  fileFormat: 'html' | 'markdown' | 'json';
+  /** File formats for saved tweets */
+  fileFormats: ('html' | 'markdown' | 'json')[];
   /** Whether to download media files */
   downloadMedia: boolean;
 }
@@ -74,7 +74,7 @@ export interface ExtensionSettings {
  */
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   savePath: 'Downloads/Twitter',
-  fileFormat: 'html',
+  fileFormats: ['html'],
   downloadMedia: true
 };
 

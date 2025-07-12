@@ -131,10 +131,10 @@ export function validateSettings(settings: Partial<ExtensionSettings>): Extensio
     };
   }
   
-  if (settings.fileFormat && !['html', 'markdown', 'json'].includes(settings.fileFormat)) {
+  if (!settings.fileFormats || settings.fileFormats.length === 0) {
     return {
-      type: ExtensionError.INVALID_TWEET_DATA,
-      message: '不支持的文件格式'
+      type: ExtensionError.SETTINGS_NOT_FOUND,
+      message: '请至少选择一种文件格式'
     };
   }
   

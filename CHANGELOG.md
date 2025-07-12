@@ -5,6 +5,12 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并且本项目遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
+## [2.0.2] - 2025-07-12
+
+### 新增 (Added)
+
+- 支持同时选择多种文件格式进行保存，将原有的下拉选择框改为多选复选框，提升了使用的灵活性。
+
 ## [2.0.1] - 2025-07-12
 
 ### 修复 (Fixed)
