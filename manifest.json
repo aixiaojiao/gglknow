@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Twitter推文收藏器",
-  "version": "1.1.9",
+  "version": "2.0.0",
+  "version_name": "2.0.0 - TypeScript Refactor",
   "description": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
   "permissions": [
     "activeTab",
