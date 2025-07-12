@@ -154,23 +154,22 @@ class TweetBrowser {
         const tweetUrlEl = doc.querySelector('.view-original-btn');
         const avatarImgEl = doc.querySelector('.user-avatar img');
         
-        const getRelativePath = (src) => {
-            try {
-                // 如果src是完整的file:/// URL，提取其路径
-                const url = new URL(src);
-                if (url.protocol === 'file:') {
-                    return decodeURIComponent(url.pathname.substring(1));
-                }
-            } catch (e) {
-                // 如果src已经是相对路径，则基于当前HTML文件的路径进行解析
-                const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-                return `${dir}/${src}`;
-            }
-            return src; // Fallback
+        const getRelativePath = (src, basePath) => {
+            if (!src || !basePath) return '';
+            
+            // 规范化路径，移除"./"
+            const cleanedSrc = src.startsWith('./') ? src.substring(2) : src;
+            
+            // 获取HTML文件所在的目录
+            const baseDir = basePath.includes('/') ? basePath.substring(0, basePath.lastIndexOf('/')) : '';
+            
+            // 组合成完整路径
+            // 如果baseDir为空（HTML在根目录），则直接返回清理后的src
+            return baseDir ? `${baseDir}/${cleanedSrc}` : cleanedSrc;
         };
 
         let timestamp = new Date().toISOString();
-        const timeEl = doc.querySelector('time[datetime]');
+        const timeEl = doc.querySelector('.tweet-stats .timestamp, time[datetime]');
         if (timeEl) {
             timestamp = timeEl.getAttribute('datetime');
         } else {
@@ -186,9 +185,9 @@ class TweetBrowser {
             userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
             text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
             timestamp: timestamp,
-            userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src')) : '',
+            userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
             media: { 
-                images: imageEls.map(img => getRelativePath(img.getAttribute('src'))), 
+                images: imageEls.map(img => getRelativePath(img.getAttribute('src'), filePath)), 
                 videos: [] 
             },
             stats: { 
@@ -342,7 +341,7 @@ class TweetBrowser {
             const retweets = tweet.stats?.retweets || '0';
 
             const avatarHtml = tweet.displayAvatarUrl
-                ? `<img src="${tweet.displayAvatarUrl}" alt="${userName}" style="width: 100%; height: 100%; object-fit: cover;">`
+                ? `<img src="${tweet.displayAvatarUrl}" alt="${userName}'s avatar">`
                 : `<span>${userName.charAt(0).toUpperCase()}</span>`;
 
             card.innerHTML = `
