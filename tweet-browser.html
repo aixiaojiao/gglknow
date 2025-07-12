@@ -16,6 +16,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            overflow-y: scroll; /* 始终显示垂直滚动条，防止布局跳动 */
         }
 
         .container {
@@ -81,8 +82,9 @@
         }
 
         .search-box {
-            flex: 1;
+            flex: 1; /* 恢复为灵活伸缩 */
             min-width: 250px;
+            max-width: 450px; /* 限制最大宽度防止过度拉伸 */
             padding: 10px 15px;
             border: 2px solid #e1e8ed;
             border-radius: 8px;
@@ -107,6 +109,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            min-width: 0; /* 允许筛选器组收缩以防止换行 */
         }
 
         .filter-label {
@@ -150,6 +153,9 @@
             border-radius: 12px;
             text-align: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .stat-number {

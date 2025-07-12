@@ -462,25 +462,35 @@ class TweetBrowser {
 
     updateAuthorFilter() {
         const authorFilter = document.getElementById('authorFilter');
-        const authors = [...new Set(this.tweets.map(t => t.userHandle).filter(Boolean))];
-        const selectedAuthor = authorFilter.value;
+        const selectedAuthorHandle = authorFilter.value; // 保存当前选中的账号名
 
+        // 1. 使用 Map 收集唯一的作者信息，以账号名为键，名字为值
+        const authorMap = new Map();
+        this.tweets.forEach(tweet => {
+            if (tweet.userHandle && !authorMap.has(tweet.userHandle)) {
+                // 如果作者名字不存在，则用账号名作为备用
+                authorMap.set(tweet.userHandle, tweet.userName || tweet.userHandle);
+            }
+        });
+
+        // 2. 将作者信息从 Map 转为数组，并按名字排序
+        const sortedAuthors = Array.from(authorMap.entries())
+            .sort(([, nameA], [, nameB]) => nameA.toLowerCase().localeCompare(nameB.toLowerCase()));
+
+        // 3. 清空并重新填充下拉列表
         authorFilter.innerHTML = '<option value="all-authors">所有作者</option>';
-        
-        authors.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-        authors.forEach(author => {
+        sortedAuthors.forEach(([handle, name]) => {
             const option = document.createElement('option');
-            option.value = author;
-            option.textContent = author;
+            option.value = handle; // 值是唯一的账号名，用于筛选
+            option.textContent = name; // 显示的是作者名字
             authorFilter.appendChild(option);
         });
 
-        // 仅更新UI，不触发任何副作用
-        if (authors.includes(selectedAuthor)) {
-            authorFilter.value = selectedAuthor;
+        // 4. 恢复之前的选中状态
+        if (authorMap.has(selectedAuthorHandle)) {
+            authorFilter.value = selectedAuthorHandle;
         } else {
             authorFilter.value = 'all-authors';
-            // 如果之前选中的作者被删，重置筛选状态，下次applyFilters时会自动生效
             if (this.filters.author !== 'all-authors') {
                 this.filters.author = 'all-authors';
             }

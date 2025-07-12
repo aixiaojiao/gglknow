@@ -5,6 +5,12 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并且本项目遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
+## [2.0.4] - 2025-07-12
+
+### ✨ 功能增强
+
+- **推文浏览器**: 作者筛选下拉菜单现在显示作者的名字而不是账号名，提升了用户体验。
+
 ## [2.0.3] - 2025-07-12
 
 ### 改进 (Improved)
