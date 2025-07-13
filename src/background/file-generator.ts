@@ -10,7 +10,7 @@ import {
     formatTimestamp,
     log
 } from '@/utils';
-import { TweetData, FileGenerationResult } from '@/types';
+import { TweetData, FileGenerationResult, ThreadData } from '@/types';
 
 /**
  * Generate file content based on tweet data and settings
@@ -33,7 +33,6 @@ export async function generateFile(
       case 'json':
         return generateJSONFile(tweetData);
       default:
-        // This case should not be reachable due to TypeScript types
         throw new Error(`Unsupported file format: ${format}`);
     }
   } catch (error) {
@@ -43,326 +42,218 @@ export async function generateFile(
 }
 
 /**
- * Generate HTML file content from tweet data
+ * Generate HTML file content for a complete thread
  */
-function generateHTMLFile(tweetData: TweetData): FileGenerationResult {
-    const userAvatarPath = tweetData.userAvatar ? `media/avatar${getFileExtension(tweetData.userAvatar) || '.jpg'}` : '';
-    const imagePaths = (tweetData.media?.images || []).map((img, index) => {
-        const ext = getFileExtension(img) || '.jpg';
-        return `media/image_${index + 1}${ext}`;
-    });
-    const videoPaths = (tweetData.media?.videos || []).map((vid, index) => {
-        const ext = getFileExtension(vid) || '.mp4';
-        return `media/video_${index + 1}${ext}`;
+export function generateThreadFile(threadData: ThreadData): FileGenerationResult {
+    const mainTweet = threadData.mainTweet || threadData.tweets[0];
+    const pageTitle = `推文串 - ${mainTweet.userName}`;
+    const filename = `${generateTweetFilename(mainTweet)}_thread`;
+
+    // Create a global mapping for all media URLs to unique local paths
+    const imagePathMap = new Map<string, string>();
+    const videoPathMap = new Map<string, string>();
+    let imageCounter = 1;
+    let videoCounter = 1;
+
+    threadData.tweets.forEach(tweet => {
+        (tweet.media?.images || []).forEach(imgUrl => {
+            if (!imagePathMap.has(imgUrl)) {
+                const ext = getFileExtension(imgUrl) || '.jpg';
+                imagePathMap.set(imgUrl, `media/image_${imageCounter++}${ext}`);
+            }
+        });
+        (tweet.media?.videos || []).forEach(vidUrl => {
+            if (!videoPathMap.has(vidUrl)) {
+                const ext = getFileExtension(vidUrl) || '.mp4';
+                videoPathMap.set(vidUrl, `media/video_${videoCounter++}${ext}`);
+            }
+        });
     });
 
-    return {
-        content: `<!DOCTYPE html>
+    const tweetBlocks = threadData.tweets.map(tweet => 
+        createTweetHTMLBlock(tweet, imagePathMap, videoPathMap)
+    ).join('');
+
+    const htmlContent = `
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>推文收藏 - ${tweetData.userName}</title>
+    <title>${pageTitle}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 650px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        .header {
-            background: linear-gradient(135deg, #1da1f2 0%, #1991db 100%);
-            color: white;
-            padding: 20px 24px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .tweet-content {
-            padding: 24px;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #eee;
-        }
-        .avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            margin-right: 12px;
-            object-fit: cover;
-            border: 2px solid #e1e8ed;
-        }
-        .avatar-placeholder {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            margin-right: 12px;
-            background: linear-gradient(135deg, #1da1f2, #1991db);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        .user-details h2 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #14171a;
-            margin-bottom: 2px;
-        }
-        .user-details p {
-            font-size: 14px;
-            color: #657786;
-        }
-        .tweet-text {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #14171a;
-            margin-bottom: 16px;
-            white-space: pre-wrap;
-        }
-        .tweet-media {
-            margin-bottom: 16px;
-        }
-        .media-grid {
-            display: grid;
-            gap: 8px;
-            border-radius: 12px;
-            overflow: hidden;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 680px; margin: 0 auto; }
+        h1 { margin-bottom: 8px; font-size: 24px; color: #0f1419; }
+        .tweet-card { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; transition: box-shadow 0.2s; }
+        .tweet-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .tweet-content { padding: 20px; }
+        .user-info { display: flex; align-items: center; margin-bottom: 12px; }
+        .avatar { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; }
+        .user-details h2 { font-size: 16px; font-weight: bold; }
+        .user-details p { font-size: 14px; color: #536471; }
+        .tweet-text { font-size: 16px; line-height: 1.6; color: #0f1419; margin-bottom: 12px; white-space: pre-wrap; }
+        .tweet-media { margin: 12px 0; }
+        .media-grid { display: grid; gap: 4px; border-radius: 12px; overflow: hidden; }
         .media-grid.single { grid-template-columns: 1fr; }
-        .media-grid.double { grid-template-columns: 1fr 1fr; }
-        .media-grid.triple { grid-template-columns: 2fr 1fr; }
-        .media-grid.quad { grid-template-columns: 1fr 1fr; }
-        .media-item {
-            position: relative;
-            overflow: hidden;
-            border-radius: 8px;
-        }
-        .media-item img, .media-item video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .media-item.tall {
-            grid-row: span 2;
-        }
-        .tweet-stats {
-            display: flex;
-            justify-content: space-around;
-            padding: 16px 0;
-            border-top: 1px solid #eee;
-            margin-top: 16px;
-        }
-        .stat {
-            text-align: center;
-            color: #657786;
-        }
-        .stat-number {
-            font-size: 18px;
-            font-weight: 700;
-            color: #14171a;
-            display: block;
-        }
-        .stat-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            margin-top: 2px;
-        }
-        .tweet-meta {
-            background: #f7f9fa;
-            padding: 16px 24px;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #657786;
-        }
-        .meta-item {
-            margin-bottom: 4px;
-        }
-        .meta-item:last-child {
-            margin-bottom: 0;
-        }
-        .meta-label {
-            font-weight: 600;
-            margin-right: 8px;
-        }
-        .view-original-btn {
-            display: inline-block;
-            margin-top: 12px;
-            padding: 8px 16px;
-            background-color: #1da1f2;
-            color: white;
-            text-decoration: none;
-            border-radius: 9999px;
-            font-size: 14px;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        .view-original-btn:hover {
-            background-color: #1991db;
-        }
-        @media (max-width: 480px) {
-            .container {
-                margin: 10px;
-                border-radius: 12px;
-            }
-            .tweet-content {
-                padding: 16px;
-            }
-            .header {
-                padding: 16px;
-            }
-            .media-grid.double,
-            .media-grid.triple,
-            .media-grid.quad {
-                grid-template-columns: 1fr;
-            }
-        }
+        .media-grid.double, .media-grid.triple, .media-grid.quad { grid-template-columns: 1fr 1fr; }
+        .media-grid img, .media-grid video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .tweet-meta { font-size: 13px; color: #536471; padding-top: 12px; border-top: 1px solid #e7e7e7; margin-top: 12px; }
+        .view-original-btn { display: inline-block; margin-top: 8px; color: #1d9bf0; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>推文收藏</h1>
-            <p>由 GglKnow 扩展保存</p>
-        </div>
-        
+        <h1>${pageTitle}</h1>
+        <p style="color: #536471; margin-bottom: 20px;">由 @${mainTweet.userHandle} 发布于 ${formatTimestamp(mainTweet.timestamp)}</p>
+        ${tweetBlocks}
+    </div>
+</body>
+</html>`;
+
+    return {
+        content: htmlContent,
+        extension: '.html',
+        filename: filename
+    };
+}
+
+
+/**
+ * Generate HTML file content from tweet data
+ */
+function generateHTMLFile(tweetData: TweetData): FileGenerationResult {
+    const imagePathMap = new Map<string, string>();
+    const videoPathMap = new Map<string, string>();
+    (tweetData.media?.images || []).forEach((imgUrl, index) => {
+        const ext = getFileExtension(imgUrl) || '.jpg';
+        imagePathMap.set(imgUrl, `media/image_${index + 1}${ext}`);
+    });
+    (tweetData.media?.videos || []).forEach((vidUrl, index) => {
+        const ext = getFileExtension(vidUrl) || '.mp4';
+        videoPathMap.set(vidUrl, `media/video_${index + 1}${ext}`);
+    });
+
+    const htmlBlock = createTweetHTMLBlock(tweetData, imagePathMap, videoPathMap);
+    const pageTitle = `推文收藏 - ${tweetData.userName}`;
+    const filename = generateTweetFilename(tweetData);
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${pageTitle}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 680px; margin: 0 auto; }
+        .tweet-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .tweet-content { padding: 20px; }
+        .user-info { display: flex; align-items: center; margin-bottom: 12px; }
+        .avatar { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; }
+        .user-details h2 { font-size: 16px; font-weight: bold; }
+        .user-details p { font-size: 14px; color: #536471; }
+        .tweet-text { font-size: 16px; line-height: 1.6; color: #0f1419; margin-bottom: 12px; white-space: pre-wrap; }
+        .tweet-media { margin: 12px 0; }
+        .media-grid { display: grid; gap: 4px; border-radius: 12px; overflow: hidden; }
+        .media-grid.single { grid-template-columns: 1fr; }
+        .media-grid.double, .media-grid.triple, .media-grid.quad { grid-template-columns: 1fr 1fr; }
+        .media-grid img, .media-grid video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .tweet-meta { font-size: 13px; color: #536471; padding-top: 12px; border-top: 1px solid #e7e7e7; margin-top: 12px; }
+        .view-original-btn { display: inline-block; margin-top: 8px; color: #1d9bf0; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        ${htmlBlock}
+    </div>
+</body>
+</html>`;
+    
+    return {
+        content: htmlContent,
+        extension: '.html',
+        filename: filename
+    };
+}
+
+/**
+ * Creates an HTML block for a single tweet.
+ */
+function createTweetHTMLBlock(
+    tweetData: TweetData,
+    imagePathMap: Map<string, string>,
+    videoPathMap: Map<string, string>
+): string {
+    const userAvatarPath = tweetData.userAvatar ? `media/avatar${getFileExtension(tweetData.userAvatar) || '.jpg'}` : '';
+    const imagePaths = (tweetData.media?.images || []).map(url => imagePathMap.get(url) || '');
+    const videoPaths = (tweetData.media?.videos || []).map(url => videoPathMap.get(url) || '');
+
+    const mediaCount = imagePaths.length + videoPaths.length;
+    const mediaGridClass = getMediaGridClass(mediaCount);
+
+    return `
+    <div class="tweet-card">
         <div class="tweet-content">
             <div class="user-info">
-                ${userAvatarPath ? `<img src="${userAvatarPath}" alt="用户头像" class="avatar">` : `<div class="avatar-placeholder">${tweetData.userName.charAt(0).toUpperCase()}</div>`}
+                ${userAvatarPath ? `<img src="${userAvatarPath}" alt="${tweetData.userName}" class="avatar">` : ''}
                 <div class="user-details">
                     <h2>${tweetData.userName}</h2>
                     <p>@${tweetData.userHandle}</p>
                 </div>
             </div>
-            
-            ${tweetData.text ? `<div class="tweet-text">${tweetData.text}</div>` : ''}
-            
-            ${imagePaths.length > 0 || videoPaths.length > 0 ? `
+            <div class="tweet-text">${tweetData.text}</div>
+            ${mediaCount > 0 ? `
             <div class="tweet-media">
-                <div class="media-grid ${getMediaGridClass(imagePaths.length + videoPaths.length)}">
-                    ${imagePaths.map(path => `
-                        <div class="media-item">
-                            <img src="${path}" alt="推文图片" loading="lazy">
-                        </div>
-                    `).join('')}
-                    ${videoPaths.map(path => `
-                        <div class="media-item">
-                            <video src="${path}" controls muted loop playsinline poster=""></video>
-                        </div>
-                    `).join('')}
+                <div class="media-grid ${mediaGridClass}">
+                    ${imagePaths.map(p => `<img src="${p}" loading="lazy">`).join('')}
+                    ${videoPaths.map(p => `<video src="${p}" controls muted loop playsinline></video>`).join('')}
                 </div>
             </div>
             ` : ''}
-            
-            <div class="tweet-stats">
-                <div class="stat">
-                    <span class="stat-number">${tweetData.stats.replies}</span>
-                    <span class="stat-label">Replies</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number">${tweetData.stats.retweets}</span>
-                    <span class="stat-label">Retweets</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number">${tweetData.stats.likes}</span>
-                    <span class="stat-label">Likes</span>
-                </div>
-            </div>
-            
             <div class="tweet-meta">
-                <div class="meta-item">
-                    <span class="meta-label">发布时间:</span>
-                    <span>${formatTimestamp(tweetData.timestamp)}</span>
-                </div>
-                ${tweetData.tweetUrl ? `<a href="${tweetData.tweetUrl}" target="_blank" rel="noopener noreferrer" class="view-original-btn">查看原文</a>` : ''}
+                <span>${formatTimestamp(tweetData.tweetTime || tweetData.timestamp)}</span>
+                <a href="${tweetData.tweetUrl}" target="_blank" class="view-original-btn">查看原文</a>
             </div>
         </div>
-    </div>
-</body>
-</html>`,
-        filename: generateTweetFilename(tweetData),
-        extension: '.html'
-    };
+    </div>`;
 }
 
 /**
  * Generate Markdown file content from tweet data
  */
 function generateMarkdownFile(tweetData: TweetData): FileGenerationResult {
-    let content = `# 推文收藏\n\n`;
+    let content = `
+# Tweet by ${tweetData.userName} (@${tweetData.userHandle})
 
-    content += `**${tweetData.userName}** (@${tweetData.userHandle})\n`;
-    content += `*${formatTimestamp(tweetData.timestamp)}*\n\n`;
+> ${tweetData.text}
 
-    if (tweetData.text) {
-        content += `${tweetData.text}\n\n`;
-    }
+`;
 
-    if (tweetData.media.images.length > 0) {
-        content += '### 图片\n';
-        tweetData.media.images.forEach((_, i) => {
-            const extension = getFileExtension(tweetData.media.images[i]) || '.jpg';
-            content += `![图片 ${i + 1}](./media/image_${i + 1}${extension})\n\n`;
-        });
-    }
-  
-  if (tweetData.media.videos.length > 0) {
-    content += `## 视频\n\n`;
-    tweetData.media.videos.forEach((_, i) => {
-      const extension = getFileExtension(tweetData.media.videos[i]) || '.mp4';
-      content += `[视频 ${i + 1}](./media/video_${i + 1}${extension})\n\n`;
+    (tweetData.media?.images || []).forEach((img, index) => {
+        const ext = getFileExtension(img) || '.jpg';
+        content += `![Image ${index + 1}](media/image_${index + 1}${ext})\n\n`;
     });
-  }
-  
-  // Stats
-  content += `## 互动数据\n\n`;
-  content += `- 回复: ${tweetData.stats.replies}\n`;
-  content += `- 转推: ${tweetData.stats.retweets}\n`;
-  content += `- 喜欢: ${tweetData.stats.likes}\n\n`;
-  
-  // Meta
-  content += `## 元数据\n\n`;
-  content += `- 保存时间: ${formatTimestamp(tweetData.timestamp)}\n`;
-  if (tweetData.tweetTime) {
-    content += `- 发布时间: ${formatTimestamp(tweetData.tweetTime)}\n`;
-  }
-  if (tweetData.tweetUrl) {
-    content += `- 原始链接: ${tweetData.tweetUrl}\n`;
-  }
-  content += `- 页面链接: ${tweetData.url}\n`;
-  
-  return {
-    content,
-    filename: generateTweetFilename(tweetData),
-    extension: '.md'
-  };
+
+    (tweetData.media?.videos || []).forEach((vid, index) => {
+        const ext = getFileExtension(vid) || '.mp4';
+        content += `[Video ${index + 1}](media/video_${index + 1}${ext})\n\n`;
+    });
+
+    content += `
+---
+- **发布时间:** ${formatTimestamp(tweetData.tweetTime || tweetData.timestamp)}
+- **原始链接:** [View on Twitter](${tweetData.tweetUrl})
+`;
+   
+   return {
+     content,
+     filename: generateTweetFilename(tweetData),
+     extension: '.md'
+   };
 }
 
 /**
@@ -393,7 +284,8 @@ function getMediaGridClass(count: number): string {
 
 export default {
   generateFile,
+  generateThreadFile,
   generateHTMLFile,
   generateMarkdownFile,
   generateJSONFile
-}; 
+};

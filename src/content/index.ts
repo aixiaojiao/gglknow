@@ -8,18 +8,22 @@ import {
   CollectTweetMessage, 
   MessageType, 
   ButtonState, 
-  CollectTweetResponse 
+  CollectTweetResponse,
+  CollectThreadMessage
 } from '@/types';
 import { 
   checkExtensionContext, 
   sendChromeMessage, 
   getErrorMessage, 
-  log 
+  log,
+  isTwitterPage
 } from '@/utils';
-import { extractTweetData, isTwitterPage } from './tweet-extractor';
+import { extractTweetData } from './tweet-extractor';
+import { isThreadPage, extractThreadData } from './thread-extractor';
 import { 
   initializeStyles, 
   addCollectionButtons, 
+  createThreadCollectionButton,
   observeNewTweets, 
   updateButtonState, 
   showTemporaryMessage 
@@ -77,7 +81,7 @@ class TwitterCollector {
       initializeStyles();
 
       // Add collection buttons to existing tweets
-      addCollectionButtons(document.body, this.handleCollectTweet.bind(this));
+      this.addCollectionButtonsToPage();
 
       // Start observing for new tweets
       this.observer = observeNewTweets(this.handleCollectTweet.bind(this));
@@ -89,6 +93,25 @@ class TwitterCollector {
       log('info', 'TwitterCollector', 'Twitter collector started successfully');
     } catch (error) {
       log('error', 'TwitterCollector', 'Failed to start collector', error);
+    }
+  }
+
+  /**
+   * Add collection buttons to the page
+   */
+  private addCollectionButtonsToPage(): void {
+    // Add regular collection buttons
+    addCollectionButtons(document.body, this.handleCollectTweet.bind(this));
+
+    // Add thread collection button if we're on a thread page
+    if (isThreadPage()) {
+      log('info', 'TwitterCollector', 'Thread page detected, adding thread collection button');
+      
+      // Find the first tweet element and add thread button
+      const firstTweet = document.querySelector('[data-testid="tweet"]');
+      if (firstTweet) {
+        createThreadCollectionButton(firstTweet, this.handleCollectThread.bind(this));
+      }
     }
   }
 
@@ -159,6 +182,68 @@ class TwitterCollector {
       log('error', 'TwitterCollector', 'Tweet collection error', error);
       
       // Show error state
+      const errorMessage = getErrorMessage(error as Error);
+      showTemporaryMessage(
+        buttonElement,
+        ButtonState.ERROR,
+        this.getShortErrorMessage(errorMessage),
+        3000
+      );
+    }
+  }
+
+  /**
+   * Handle thread collection
+   */
+  private async handleCollectThread(tweetElement: Element, buttonElement: Element): Promise<void> {
+    try {
+      log('info', 'TwitterCollector', 'Starting thread collection');
+
+      if (!checkExtensionContext()) {
+        throw new Error(chrome.i18n.getMessage('errorContextUnavailable'));
+      }
+
+      updateButtonState(buttonElement, ButtonState.LOADING);
+
+      const threadData = await extractThreadData(tweetElement);
+      
+      log('info', 'TwitterCollector', 'Thread data extracted', {
+        tweetCount: threadData?.tweets.length || 0
+      });
+
+      if (!threadData || threadData.tweets.length === 0) {
+        throw new Error(chrome.i18n.getMessage('errorCannotExtractThread'));
+      }
+
+      const message: CollectThreadMessage = {
+        type: MessageType.COLLECT_THREAD,
+        threadData: threadData,
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await sendChromeMessage<CollectTweetResponse>(message);
+      log('info', 'TwitterCollector', 'Background response for thread received', response);
+
+      if (response && response.success) {
+        showTemporaryMessage(
+          buttonElement,
+          ButtonState.SUCCESS,
+          response.message || '串已收藏',
+          2000
+        );
+      } else {
+        const errorMessage = response?.error || chrome.i18n.getMessage('errorUnknown');
+        showTemporaryMessage(
+          buttonElement,
+          ButtonState.ERROR,
+          this.getShortErrorMessage(errorMessage),
+          3000
+        );
+      }
+
+    } catch (error) {
+      log('error', 'TwitterCollector', 'Thread collection error', error);
+      
       const errorMessage = getErrorMessage(error as Error);
       showTemporaryMessage(
         buttonElement,

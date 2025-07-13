@@ -262,7 +262,7 @@ function extractTweetStats(tweetElement: Element, data: TweetData): void {
 }
 
 /**
- * Extract tweet metadata (URL, timestamp)
+ * Extract tweet URL and time from metadata
  */
 function extractTweetMetadata(tweetElement: Element, data: TweetData): void {
   // Extract tweet time
@@ -286,62 +286,23 @@ function extractTweetMetadata(tweetElement: Element, data: TweetData): void {
   });
 }
 
-/**
- * Check if the current page is Twitter/X
- */
-export function isTwitterPage(): boolean {
-  return window.location.hostname === 'twitter.com' || 
-         window.location.hostname === 'x.com' ||
-         window.location.hostname === 'www.twitter.com' ||
-         window.location.hostname === 'www.x.com';
-}
-
-/**
- * Find tweet elements on the page
- */
 export function findTweetElements(): Element[] {
   const tweetSelectors = [
     'article[data-testid="tweet"]',
-    '[data-testid="tweet"]',
-    'div[data-testid="tweetText"]'
+    '[data-testid="tweet"]'
   ];
 
-  const tweetElements: Element[] = [];
-  
+  const elements = new Set<Element>();
+
   for (const selector of tweetSelectors) {
-    const elements = document.querySelectorAll(selector);
-    for (const element of elements) {
-      // Only add if it's a proper tweet container
-      if (isTweetElement(element)) {
-        tweetElements.push(element);
-      }
-    }
+    const found = document.querySelectorAll(selector);
+    found.forEach(el => elements.add(el));
   }
 
-  return tweetElements;
-}
-
-/**
- * Check if element is a proper tweet container
- */
-function isTweetElement(element: Element): boolean {
-  // Must have some text content
-  if (!element.textContent?.trim()) return false;
-  
-  // Should have user information
-  const hasUserInfo = element.querySelector('[data-testid="User-Names"]') || 
-                     element.querySelector('[data-testid="User-Name"]');
-  
-  if (!hasUserInfo) return false;
-  
-  // Should not be a quote tweet or reply indicator
-  if (element.closest('[data-testid="quoteTweet"]')) return false;
-  
-  return true;
+  return Array.from(elements);
 }
 
 export default {
   extractTweetData,
-  isTwitterPage,
   findTweetElements
 }; 

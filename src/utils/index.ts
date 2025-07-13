@@ -246,6 +246,16 @@ export function sendChromeMessage<T>(message: any): Promise<T> {
 }
 
 /**
+ * Checks if the current page is Twitter/X
+ */
+export function isTwitterPage(): boolean {
+  return window.location.hostname === 'twitter.com' ||
+         window.location.hostname === 'x.com' ||
+         window.location.hostname === 'www.twitter.com' ||
+         window.location.hostname === 'www.x.com';
+}
+
+/**
  * Localizes the current document by replacing elements with data-i18n attributes.
  */
 export function localizePage(): void {
@@ -437,5 +447,6 @@ export default {
   log,
   debounce,
   isTwitterUrl,
-  isMediaUrl
+  isMediaUrl,
+  isTwitterPage
 }; 

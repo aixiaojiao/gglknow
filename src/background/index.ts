@@ -11,19 +11,22 @@ import {
   SaveSettingsMessage,
   MessageType,
   TweetData,
+  ThreadData,
+  CollectThreadMessage,
   MediaToDownload,
   isLegacyMessage,
-  isExtensionMessage
+  isExtensionMessage,
+  ExtensionError
 } from '@/types';
 import { 
   validateTweetData, 
   generateTweetFilename, 
   createError, 
   getErrorMessage,
-  log 
+  log
 } from '@/utils';
 import { getSettings, saveSettings } from './settings';
-import { generateFile } from './file-generator';
+import { generateFile, generateThreadFile } from './file-generator';
 import { downloadMediaFiles, downloadTweetFile } from './media-downloader';
 
 // Service Worker 生命周期事件
@@ -98,6 +101,12 @@ async function handleExtensionMessage(
         const collectMessage = message as CollectTweetMessage;
         const result = await handleCollectTweet(collectMessage.tweetData);
         sendResponse(result);
+        break;
+
+      case MessageType.COLLECT_THREAD:
+        const collectThreadMessage = message as CollectThreadMessage;
+        const threadResult = await handleCollectThread(collectThreadMessage.threadData);
+        sendResponse(threadResult);
         break;
 
       case MessageType.TEST_CONNECTION:
@@ -224,6 +233,76 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
     };
   } catch (error) {
     log('error', 'ServiceWorker', 'Tweet collection failed', error);
+    
+    return {
+      success: false,
+      error: getErrorMessage(error as Error)
+    };
+  }
+}
+
+/**
+ * Handle thread collection request
+ */
+async function handleCollectThread(threadData: ThreadData): Promise<CollectTweetResponse> {
+  try {
+    const mainTweet = threadData.mainTweet || threadData.tweets[0];
+    if (!mainTweet) {
+      throw createError(ExtensionError.INVALID_TWEET_DATA, "线程数据为空或无效");
+    }
+
+    log('info', 'ServiceWorker', 'Starting thread collection', {
+      tweetCount: threadData.tweets.length,
+      author: mainTweet.userName
+    });
+
+    // Get settings
+    const settings = await getSettings();
+
+    // Generate a single HTML file for the entire thread
+    const fileResult = generateThreadFile(threadData);
+    
+    // Download the generated file
+    await downloadTweetFile(
+      fileResult.filename,
+      fileResult.content,
+      settings.savePath,
+      fileResult.extension
+    );
+    log('info', 'ServiceWorker', `Thread file (${fileResult.extension}) downloaded successfully`);
+
+    let totalMediaCount = 0;
+    if (settings.downloadMedia) {
+      // Collect all media from all tweets in the thread
+      const allMedia: MediaToDownload = { images: [], videos: [], avatar: null };
+      
+      threadData.tweets.forEach(tweet => {
+        allMedia.images.push(...(tweet.media?.images || []));
+        allMedia.videos.push(...(tweet.media?.videos || []));
+        // Use the first tweet's avatar
+        if (!allMedia.avatar) {
+          allMedia.avatar = tweet.userAvatar || null;
+        }
+      });
+      
+      totalMediaCount = allMedia.images.length + allMedia.videos.length + (allMedia.avatar ? 1 : 0);
+
+      if (totalMediaCount > 0) {
+        log('info', 'ServiceWorker', 'Starting media download for thread', { totalMediaCount });
+        await downloadMediaFiles(allMedia, settings.savePath, fileResult.filename);
+        log('info', 'ServiceWorker', 'Media download for thread completed', { totalMediaCount });
+      }
+    }
+    
+    return {
+      success: true,
+      message: '推文串收藏成功',
+      filename: fileResult.filename,
+      mediaCount: totalMediaCount
+    };
+
+  } catch (error) {
+    log('error', 'ServiceWorker', 'Thread collection failed', error);
     
     return {
       success: false,

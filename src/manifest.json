@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "GglKnow - Tweet Saver",
-  "version": "1.2.0",
-  "description": "Save and browse tweets locally with media support",
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
+  "version": "2.1.1",
+  "version_name": "2.1.1-dev",
+  "default_locale": "en",
   "permissions": [
     "storage",
     "downloads",

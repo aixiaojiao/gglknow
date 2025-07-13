@@ -9,7 +9,8 @@ import { log, debounce } from '@/utils';
 
 // CSS styles for the collection button
 const BUTTON_STYLES = `
-  .twitter-collector-btn {
+  .twitter-collector-btn,
+  .twitter-collector-thread-btn {
     display: inline-flex;
     align-items: center;
     margin-left: 8px;
@@ -38,6 +39,17 @@ const BUTTON_STYLES = `
     background: #f7f9fa;
     border-color: #1d9bf0;
     color: #1d9bf0;
+  }
+  
+  .collect-button.thread-button {
+    border-color: #10a37f;
+    color: #10a37f;
+  }
+
+  .collect-button.thread-button:hover {
+    background: #f0fdf4;
+    border-color: #10a37f;
+    color: #10a37f;
   }
   
   .collect-button svg {
@@ -85,6 +97,17 @@ const BUTTON_STYLES = `
       border-color: #1d9bf0;
       color: #1d9bf0;
     }
+
+    .collect-button.thread-button {
+      border-color: #10a37f;
+      color: #10a37f;
+    }
+    
+    .collect-button.thread-button:hover {
+      background: #0f2419;
+      border-color: #10a37f;
+      color: #10a37f;
+    }
     
     .collect-button.loading {
       background: #0a1a2a;
@@ -107,6 +130,12 @@ const ICONS = {
   idle: `
     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+    </svg>
+  `,
+  thread: `
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83z"/>
+      <circle cx="12" cy="10" r="3"/>
     </svg>
   `,
   loading: `
@@ -137,6 +166,7 @@ const ICONS = {
  */
 const BUTTON_TEXT = {
   idle: '收藏',
+  thread: '收藏串',
   loading: '收藏中...',
   success: '已收藏',
   error: '收藏失败'
@@ -212,6 +242,58 @@ export function createCollectionButton(
 }
 
 /**
+ * Create a thread collection button for a tweet element
+ */
+export function createThreadCollectionButton(
+  tweetElement: Element,
+  onCollectThread: (tweetElement: Element, buttonElement: Element) => void
+): Element | null {
+  try {
+    // Check if button already exists
+    if (tweetElement.querySelector('.twitter-collector-thread-btn')) {
+      return null;
+    }
+
+    // Find the action bar to insert the button
+    const actionBar = findActionBar(tweetElement);
+    if (!actionBar) {
+      log('warn', 'UIManager', 'Could not find action bar for thread button');
+      return null;
+    }
+
+    // Create button element
+    const collectBtn = document.createElement('div');
+    collectBtn.className = 'twitter-collector-thread-btn';
+    collectBtn.innerHTML = `
+      <div class="collect-button thread-button" title="收藏推文串">
+        ${ICONS.thread}
+        <span class="collect-text">${BUTTON_TEXT.thread}</span>
+      </div>
+    `;
+
+    // Add click event listener with debounce
+    const debouncedCollect = debounce(() => {
+      onCollectThread(tweetElement, collectBtn);
+    }, 300);
+
+    collectBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      debouncedCollect();
+    });
+
+    // Insert button into action bar
+    actionBar.appendChild(collectBtn);
+
+    log('info', 'UIManager', 'Thread collection button created');
+    return collectBtn;
+  } catch (error) {
+    log('error', 'UIManager', 'Failed to create thread collection button', error);
+    return null;
+  }
+}
+
+/**
  * Find the action bar in a tweet element
  */
 function findActionBar(tweetElement: Element): Element | null {
@@ -256,15 +338,25 @@ export function updateButtonState(
   // Remove all state classes
   button.classList.remove('loading', 'success', 'error');
 
-  // Add new state class
-  if (state !== ButtonState.IDLE) {
+  let icon: string;
+  let text: string;
+
+  // Add new state class and determine content
+  if (state === ButtonState.IDLE) {
+    if (button.classList.contains('thread-button')) {
+      icon = ICONS.thread;
+      text = message || BUTTON_TEXT.thread;
+    } else {
+      icon = ICONS.idle;
+      text = message || BUTTON_TEXT.idle;
+    }
+  } else {
     button.classList.add(state);
+    icon = ICONS[state];
+    text = message || BUTTON_TEXT[state];
   }
 
-  // Update icon and text
-  const icon = ICONS[state];
-  const text = message || BUTTON_TEXT[state];
-
+  // Update button inner HTML
   button.innerHTML = `${icon}<span class="collect-text">${text}</span>`;
 
   log('info', 'UIManager', 'Button state updated', { state, message });
@@ -279,15 +371,12 @@ export function showTemporaryMessage(
   message: string,
   duration: number = 3000
 ): void {
-  const originalState = ButtonState.IDLE;
-  const originalMessage = BUTTON_TEXT.idle;
-
   // Show temporary state
   updateButtonState(buttonElement, state, message);
 
   // Restore original state after duration
   setTimeout(() => {
-    updateButtonState(buttonElement, originalState, originalMessage);
+    updateButtonState(buttonElement, ButtonState.IDLE);
   }, duration);
 }
 

@@ -55,6 +55,14 @@ export interface TweetData {
   stats: TweetStats;
 }
 
+/**
+ * Data for a complete tweet thread
+ */
+export interface ThreadData {
+  tweets: TweetData[];
+  mainTweet: TweetData | null;
+}
+
 // ===== Extension Settings =====
 
 /**
@@ -85,6 +93,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
  */
 export enum MessageType {
   COLLECT_TWEET = 'collectTweet',
+  COLLECT_THREAD = 'collectThread',
   CONTENT_LOADED = 'CONTENT_LOADED',
   TEST_CONNECTION = 'TEST_CONNECTION',
   GET_SETTINGS = 'GET_SETTINGS',
@@ -108,6 +117,15 @@ export interface CollectTweetMessage extends BaseMessage {
   type: MessageType.COLLECT_TWEET;
   /** Tweet data to be collected */
   tweetData: TweetData;
+}
+
+/**
+ * Message to collect a thread
+ */
+export interface CollectThreadMessage extends BaseMessage {
+  type: MessageType.COLLECT_THREAD;
+  /** Thread data to be collected */
+  threadData: ThreadData;
 }
 
 /**
@@ -145,6 +163,7 @@ export interface SaveSettingsMessage extends BaseMessage {
  */
 export type ExtensionMessage = 
   | CollectTweetMessage
+  | CollectThreadMessage
   | ContentLoadedMessage
   | TestConnectionMessage
   | GetSettingsMessage
@@ -175,6 +194,18 @@ export interface CollectTweetResponse extends BaseResponse {
 }
 
 /**
+ * Response for thread collection
+ */
+export interface CollectThreadResponse extends BaseResponse {
+  /** Generated filename if successful */
+  filename?: string;
+  /** Number of tweets in the thread */
+  tweetCount?: number;
+  /** Number of media files downloaded */
+  mediaCount?: number;
+}
+
+/**
  * Response for settings operations
  */
 export interface SettingsResponse extends BaseResponse {
@@ -195,6 +226,7 @@ export interface TestConnectionResponse extends BaseResponse {
  */
 export type ExtensionResponse = 
   | CollectTweetResponse
+  | CollectThreadResponse
   | SettingsResponse
   | TestConnectionResponse
   | BaseResponse;
