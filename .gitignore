@@ -30,3 +30,6 @@ Thumbs.db
 
 # Build artifacts
 *.zip 
+
+# Private documents
+PRODUCT_ROADMAP.md
