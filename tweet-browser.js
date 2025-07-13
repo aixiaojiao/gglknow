@@ -11,6 +11,11 @@ class TweetBrowser {
             time: 'all-time'      // 'all-time', 'today', 'week', 'month'
         };
         this.uiLocale = 'default';
+        // 添加持久化相关属性
+        this.storageKey = 'tweetBrowserData';
+        this.dataVersion = '1.0';
+        this.lastFolderName = null;
+        this.needsMediaReload = false; // 标记是否需要重新加载媒体文件
         this.init();
     }
 
@@ -20,6 +25,13 @@ class TweetBrowser {
             this.localizePage();
         }
         this.bindEvents();
+        // 初始化时尝试加载保存的数据
+        const hasLoadedData = this.loadFromStorage();
+        
+        // 如果没有加载到数据，显示空状态
+        if (!hasLoadedData) {
+            this.showEmptyState();
+        }
     }
 
     localizePage() {
@@ -65,14 +77,26 @@ class TweetBrowser {
             this.loadFiles(e.target.files);
         });
 
+        // 清除数据按钮事件
+        document.getElementById('clearDataBtn').addEventListener('click', (e) => {
+            this.clearAllData();
+        });
+
+        // 重新加载图片按钮事件
+        document.getElementById('reloadMediaBtn').addEventListener('click', (e) => {
+            this.triggerFileSelection();
+        });
+
         document.getElementById('authorFilter').addEventListener('change', (e) => {
             this.filters.author = e.target.value;
             this.applyFilters();
+            this.saveToStorage(); // 保存过滤器状态
         });
 
         document.getElementById('searchBox').addEventListener('input', (e) => {
             this.filters.searchQuery = e.target.value.toLowerCase();
             this.applyFilters();
+            this.saveToStorage(); // 保存过滤器状态
         });
 
         document.getElementById('content-filters').addEventListener('click', (e) => {
@@ -81,6 +105,7 @@ class TweetBrowser {
                 document.querySelectorAll('#content-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 this.applyFilters();
+                this.saveToStorage(); // 保存过滤器状态
             }
         });
 
@@ -90,6 +115,7 @@ class TweetBrowser {
                 document.querySelectorAll('#time-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 this.applyFilters();
+                this.saveToStorage(); // 保存过滤器状态
             }
         });
     }
@@ -107,11 +133,46 @@ class TweetBrowser {
     async loadFiles(files) {
         if (!files.length) return;
 
+        // 获取当前选择的文件夹名称
+        const firstFile = files[0];
+        const currentFolderName = firstFile.webkitRelativePath ? 
+            firstFile.webkitRelativePath.split('/')[0] : '选择的文件';
+
+        // 检查是否需要重新加载媒体文件
+        if (this.needsMediaReload && this.tweets.length > 0) {
+            const isSameFolder = currentFolderName === this.lastFolderName;
+            
+            if (isSameFolder) {
+                // 相同文件夹，自动重新加载图片
+                await this.reloadMediaForTweets(files);
+                this.needsMediaReload = false;
+                return;
+            } else {
+                // 不同文件夹，询问用户是否要替换数据
+                const shouldReplace = confirm(
+                    `检测到新的文件夹 "${currentFolderName}"，与之前的文件夹 "${this.lastFolderName}" 不同。\n\n` +
+                    `是否要替换现有数据？\n` +
+                    `- 点击"确定"：清除现有数据并加载新文件夹\n` +
+                    `- 点击"取消"：保持现有数据并为其加载图片`
+                );
+                
+                if (!shouldReplace) {
+                    // 用户选择保持现有数据，为现有数据加载图片
+                    await this.reloadMediaForTweets(files);
+                    this.needsMediaReload = false;
+                    return;
+                }
+                // 用户选择替换，继续执行下面的正常加载流程
+                this.needsMediaReload = false;
+            }
+        }
+
         try {
             this.showLoading();
             this.clearPreviousData();
 
             this.fileMap = new Map(Array.from(files).map(file => [file.webkitRelativePath, file]));
+            this.lastFolderName = currentFolderName;
             
             const htmlFiles = Array.from(files).filter(file => file.name.endsWith('.html'));
             let loadedCount = 0;
@@ -135,6 +196,13 @@ class TweetBrowser {
             
             this.updateStats();
             this.applyFilters();
+
+            // 保存数据到localStorage
+            this.saveToStorage();
+            
+            // 更新清除按钮可见性
+            this.updateClearButtonVisibility();
+            this.updateReloadMediaButtonVisibility();
 
             this.showNotification(chrome.i18n.getMessage('notifyLoadedTweets', [loadedCount.toString()]));
 
@@ -422,6 +490,16 @@ class TweetBrowser {
         container.innerHTML = `<div class="loading">${chrome.i18n.getMessage('loadingTweets')}</div>`;
     }
 
+    showEmptyState() {
+        const container = document.getElementById('tweetsContainer');
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>📂 开始浏览你的推文收藏</h3>
+                <p>点击上方的"📁 Select Tweet Folder"按钮选择保存的推文文件夹。<br>支持HTML和JSON格式的推文文件。</p>
+            </div>
+        `;
+    }
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -443,7 +521,22 @@ class TweetBrowser {
         // 最终的数据处理流程
         this.updateStats();
         this.applyFilters();
+        this.updateReloadMediaButtonVisibility();
+        this.saveToStorage(); // 保存删除后的数据
         this.showNotification(chrome.i18n.getMessage('notifyTweetDeleted'));
+    }
+
+    // 清除所有数据
+    clearAllData() {
+        if (confirm('确定要清除所有保存的推文数据吗？此操作不可撤销。')) {
+            this.clearPreviousData();
+            this.clearStorage();
+            this.showEmptyState();
+            this.updateClearButtonVisibility();
+            this.updateReloadMediaButtonVisibility();
+            this.needsMediaReload = false;
+            this.showNotification('已清除所有保存的数据');
+        }
     }
 
     showTweetDetail(index) {
@@ -531,6 +624,195 @@ class TweetBrowser {
             if (this.filters.author !== 'all-authors') {
                 this.filters.author = 'all-authors';
             }
+        }
+    }
+
+    // 保存数据到localStorage
+    saveToStorage() {
+        try {
+            // 过滤掉临时URL字段，只保存原始路径
+            const tweetsToSave = this.tweets.map(tweet => {
+                const { displayAvatarUrl, displayImageUrls, ...tweetData } = tweet;
+                return tweetData;
+            });
+            
+            const dataToSave = {
+                version: this.dataVersion,
+                tweets: tweetsToSave,
+                lastFolderName: this.lastFolderName,
+                lastUpdated: new Date().toISOString(),
+                filters: this.filters
+            };
+            localStorage.setItem(this.storageKey, JSON.stringify(dataToSave));
+            console.log('数据已保存到localStorage');
+        } catch (error) {
+            console.error('保存数据失败:', error);
+            this.showNotification('保存数据失败，请检查浏览器存储权限');
+        }
+    }
+
+    // 从localStorage加载数据
+    loadFromStorage() {
+        try {
+            const savedData = localStorage.getItem(this.storageKey);
+            if (!savedData) {
+                console.log('没有找到保存的数据');
+                this.updateClearButtonVisibility();
+                this.updateReloadMediaButtonVisibility();
+                return false;
+            }
+
+            const data = JSON.parse(savedData);
+            
+            // 检查数据版本
+            if (data.version !== this.dataVersion) {
+                console.log('数据版本不匹配，清除旧数据');
+                this.clearStorage();
+                this.updateClearButtonVisibility();
+                this.updateReloadMediaButtonVisibility();
+                return false;
+            }
+
+            // 恢复推文数据
+            if (data.tweets && data.tweets.length > 0) {
+                // 为加载的推文添加空的 display URL 字段
+                this.tweets = data.tweets.map(tweet => ({
+                    ...tweet,
+                    displayAvatarUrl: '',
+                    displayImageUrls: []
+                }));
+                this.lastFolderName = data.lastFolderName;
+                this.needsMediaReload = true; // 标记需要重新加载媒体文件
+                
+                // 恢复过滤器状态
+                if (data.filters) {
+                    this.filters = { ...this.filters, ...data.filters };
+                    this.restoreFilterUI();
+                }
+
+                // 更新UI
+                this.updateStats();
+                this.applyFilters();
+                this.updateClearButtonVisibility();
+                this.updateReloadMediaButtonVisibility();
+                
+                // 显示自动加载的通知，提示用户选择文件夹
+                const folderName = this.lastFolderName || '未知文件夹';
+                this.showNotification(`已自动加载上次的推文数据 (${folderName}) - 选择相同文件夹可恢复图片`);
+                
+                console.log(`已从localStorage加载${this.tweets.length}条推文`);
+                return true;
+            }
+        } catch (error) {
+            console.error('加载保存数据失败:', error);
+            this.clearStorage();
+        }
+        this.updateClearButtonVisibility();
+        this.updateReloadMediaButtonVisibility();
+        return false;
+    }
+
+    // 清除localStorage中的数据
+    clearStorage() {
+        try {
+            localStorage.removeItem(this.storageKey);
+            console.log('已清除localStorage中的数据');
+        } catch (error) {
+            console.error('清除数据失败:', error);
+        }
+    }
+
+    // 获取保存数据的状态信息
+    getStorageInfo() {
+        try {
+            const savedData = localStorage.getItem(this.storageKey);
+            if (!savedData) return null;
+
+            const data = JSON.parse(savedData);
+            return {
+                hasData: true,
+                version: data.version,
+                tweetCount: data.tweets?.length || 0,
+                folderName: data.lastFolderName,
+                lastUpdated: data.lastUpdated
+            };
+        } catch (error) {
+            console.error('获取存储信息失败:', error);
+            return null;
+        }
+    }
+
+    // 更新清除按钮的可见性
+    updateClearButtonVisibility() {
+        const clearBtn = document.getElementById('clearDataBtn');
+        const hasData = this.tweets.length > 0;
+        clearBtn.style.display = hasData ? 'inline-block' : 'none';
+    }
+
+    // 更新重新加载图片按钮的可见性
+    updateReloadMediaButtonVisibility() {
+        const reloadBtn = document.getElementById('reloadMediaBtn');
+        const hasDataWithoutImages = this.tweets.length > 0 && 
+                                   this.tweets.some(tweet => 
+                                       (tweet.userAvatarUrl && !tweet.displayAvatarUrl) ||
+                                       (tweet.media?.images?.length > 0 && tweet.displayImageUrls?.length === 0)
+                                   );
+        reloadBtn.style.display = hasDataWithoutImages ? 'inline-block' : 'none';
+    }
+
+    // 触发文件选择对话框
+    triggerFileSelection() {
+        const fileInput = document.getElementById('fileInput');
+        fileInput.click();
+    }
+
+
+
+    // 恢复过滤器UI状态
+    restoreFilterUI() {
+        // 恢复搜索框
+        document.getElementById('searchBox').value = this.filters.searchQuery || '';
+        
+        // 恢复内容过滤器
+        document.querySelectorAll('#content-filters .filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === this.filters.content);
+        });
+        
+        // 恢复时间过滤器
+        document.querySelectorAll('#time-filters .filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === this.filters.time);
+        });
+    }
+
+
+
+    // 重新加载推文的媒体文件
+    async reloadMediaForTweets(files) {
+        if (!files.length || !this.tweets.length) return;
+
+        try {
+            this.showLoading();
+            
+            // 更新文件映射
+            this.fileMap = new Map(Array.from(files).map(file => [file.webkitRelativePath, file]));
+            
+            // 为每个推文重新解析媒体路径
+            for (let i = 0; i < this.tweets.length; i++) {
+                const tweet = this.tweets[i];
+                const updatedTweet = await this.resolveMediaPaths(tweet);
+                this.tweets[i] = updatedTweet;
+            }
+
+            // 更新UI
+            this.applyFilters();
+            this.updateReloadMediaButtonVisibility();
+            this.saveToStorage();
+            
+            this.showNotification('图片已自动重新加载');
+            
+        } catch (error) {
+            console.error('重新加载图片失败:', error);
+            this.showNotification('重新加载图片失败');
         }
     }
 }
