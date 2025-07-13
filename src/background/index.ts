@@ -26,7 +26,7 @@ import {
   log
 } from '@/utils';
 import { getSettings, saveSettings } from './settings';
-import { generateFile, generateThreadFile } from './file-generator';
+import { generateFile, generateFileForThread } from './file-generator';
 import { downloadMediaFiles, downloadTweetFile } from './media-downloader';
 
 // Service Worker 生命周期事件
@@ -256,30 +256,28 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
       author: mainTweet.userName
     });
 
-    // Get settings
     const settings = await getSettings();
+    const baseFilename = `${generateTweetFilename(mainTweet)}_thread`;
 
-    // Generate a single HTML file for the entire thread
-    const fileResult = generateThreadFile(threadData);
-    
-    // Download the generated file
-    await downloadTweetFile(
-      fileResult.filename,
-      fileResult.content,
-      settings.savePath,
-      fileResult.extension
-    );
-    log('info', 'ServiceWorker', `Thread file (${fileResult.extension}) downloaded successfully`);
+    for (const format of settings.fileFormats) {
+      const fileResult = await generateFileForThread(threadData, format);
+      
+      await downloadTweetFile(
+        baseFilename, // Use consistent base filename
+        fileResult.content,
+        settings.savePath,
+        fileResult.extension
+      );
+      log('info', 'ServiceWorker', `Thread file (${format}) downloaded successfully`);
+    }
 
     let totalMediaCount = 0;
     if (settings.downloadMedia) {
-      // Collect all media from all tweets in the thread
       const allMedia: MediaToDownload = { images: [], videos: [], avatar: null };
       
       threadData.tweets.forEach(tweet => {
         allMedia.images.push(...(tweet.media?.images || []));
         allMedia.videos.push(...(tweet.media?.videos || []));
-        // Use the first tweet's avatar
         if (!allMedia.avatar) {
           allMedia.avatar = tweet.userAvatar || null;
         }
@@ -289,7 +287,7 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
 
       if (totalMediaCount > 0) {
         log('info', 'ServiceWorker', 'Starting media download for thread', { totalMediaCount });
-        await downloadMediaFiles(allMedia, settings.savePath, fileResult.filename);
+        await downloadMediaFiles(allMedia, settings.savePath, baseFilename);
         log('info', 'ServiceWorker', 'Media download for thread completed', { totalMediaCount });
       }
     }
@@ -297,7 +295,7 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
     return {
       success: true,
       message: '推文串收藏成功',
-      filename: fileResult.filename,
+      filename: baseFilename,
       mediaCount: totalMediaCount
     };
 

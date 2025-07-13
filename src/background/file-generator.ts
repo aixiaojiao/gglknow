@@ -42,9 +42,34 @@ export async function generateFile(
 }
 
 /**
+ * Generate file content for a thread based on format
+ */
+export async function generateFileForThread(
+  threadData: ThreadData,
+  format: 'html' | 'markdown' | 'json'
+): Promise<FileGenerationResult> {
+  try {
+    log('info', 'FileGenerator', `Generating ${format} file for thread`);
+    switch (format) {
+      case 'html':
+        return generateThreadHTMLFile(threadData);
+      case 'markdown':
+        return generateThreadMarkdownFile(threadData);
+      case 'json':
+        return generateThreadJSONFile(threadData);
+      default:
+        throw new Error(`Unsupported file format for thread: ${format}`);
+    }
+  } catch (error) {
+    log('error', 'FileGenerator', 'Failed to generate thread file', error);
+    throw error;
+  }
+}
+
+/**
  * Generate HTML file content for a complete thread
  */
-export function generateThreadFile(threadData: ThreadData): FileGenerationResult {
+function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
     const mainTweet = threadData.mainTweet || threadData.tweets[0];
     const pageTitle = `推文串 - ${mainTweet.userName}`;
     const filename = `${generateTweetFilename(mainTweet)}_thread`;
@@ -116,6 +141,53 @@ export function generateThreadFile(threadData: ThreadData): FileGenerationResult
         content: htmlContent,
         extension: '.html',
         filename: filename
+    };
+}
+
+/**
+ * Generate Markdown file for a complete thread
+ */
+function generateThreadMarkdownFile(threadData: ThreadData): FileGenerationResult {
+    const mainTweet = threadData.mainTweet || threadData.tweets[0];
+    const filename = `${generateTweetFilename(mainTweet)}_thread`;
+
+    const markdownBlocks = threadData.tweets.map(tweet => {
+        let content = `> ${tweet.text}\n\n`;
+        (tweet.media?.images || []).forEach((img, index) => {
+            content += `![Image ${index + 1}](./media/image_${index + 1}${getFileExtension(img) || '.jpg'})\n\n`;
+        });
+        (tweet.media?.videos || []).forEach((vid, index) => {
+            content += `[Video ${index + 1}](./media/video_${index + 1}${getFileExtension(vid) || '.mp4'})\n\n`;
+        });
+        content += `*— ${tweet.userName} (@${tweet.userHandle}) on ${formatTimestamp(tweet.tweetTime || tweet.timestamp)}* | [View Original](${tweet.tweetUrl})\n\n---\n\n`;
+        return content;
+    }).join('');
+
+    const fullContent = `
+# Thread by @${mainTweet.userHandle}
+
+${markdownBlocks}
+`;
+
+    return {
+        content: fullContent,
+        filename: filename,
+        extension: '.md'
+    };
+}
+
+/**
+ * Generate JSON file for a complete thread
+ */
+function generateThreadJSONFile(threadData: ThreadData): FileGenerationResult {
+    const mainTweet = threadData.mainTweet || threadData.tweets[0];
+    const filename = `${generateTweetFilename(mainTweet)}_thread`;
+    const content = JSON.stringify(threadData, null, 2);
+
+    return {
+        content: content,
+        filename: filename,
+        extension: '.json'
     };
 }
 
@@ -284,8 +356,8 @@ function getMediaGridClass(count: number): string {
 
 export default {
   generateFile,
-  generateThreadFile,
-  generateHTMLFile,
+  generateFileForThread,
+  generateThreadHTMLFile,
   generateMarkdownFile,
   generateJSONFile
 };
