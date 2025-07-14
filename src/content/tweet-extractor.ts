@@ -209,9 +209,29 @@ function extractMediaData(tweetElement: Element, data: TweetData): void {
           !src.includes('profile_images') && 
           !src.includes('emoji') && 
           !src.includes('icon') && 
-          !src.includes('avatar') &&
-          !media.images.includes(src)) {
-        media.images.push(src);
+          !src.includes('avatar')) {
+        
+        let finalUrl = src; // Default to original src
+
+        try {
+          if (src.includes('pbs.twimg.com/media')) {
+            const imageUrl = new URL(src);
+            const format = imageUrl.searchParams.get('format') || 'jpg';
+            
+            // Reconstruct URL to get original quality image
+            const reconstructedUrl = new URL(imageUrl.pathname, imageUrl.origin);
+            reconstructedUrl.searchParams.set('format', format);
+            reconstructedUrl.searchParams.set('name', 'orig');
+            finalUrl = reconstructedUrl.toString();
+          }
+        } catch (e) {
+          log('warn', 'TweetExtractor', 'Could not convert image URL to original quality, using fallback', { src, error: e });
+          // Fallback to the original src is already handled by default
+        }
+
+        if (!media.images.includes(finalUrl)) {
+          media.images.push(finalUrl);
+        }
       }
     }
   }
