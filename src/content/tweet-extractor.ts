@@ -112,7 +112,7 @@ function extractUserInfo(tweetElement: Element, data: TweetData): void {
 
   // Fallback: extract from URL if no user info found
   if (!data.userName && !data.userHandle) {
-    const urlMatch = window.location.href.match(/(?:twitter\.com|x\.com)\/([^\/]+)/);
+    const urlMatch = window.location.href.match(/(?:twitter\.com|x\.com)\/([^/]+)/);
     if (urlMatch) {
       data.userHandle = urlMatch[1];
       data.userName = urlMatch[1];
@@ -409,7 +409,7 @@ function extractArticleContent(tweetElement: Element): string | null {
     let articleContent = '';
     let bestElement: Element | null = null;
     let maxLength = 0;
-    let candidateElements: Array<{element: Element, text: string, selector: string}> = [];
+    const candidateElements: Array<{element: Element, text: string, selector: string}> = [];
 
     // Try each selector and find the one with the most content
     for (const selector of articleSelectors) {
@@ -539,7 +539,7 @@ function isUIElement(text: string): boolean {
   if (uiPatterns.some(pattern => pattern.test(cleanText))) return true;
   
   // Check if it's mostly punctuation or numbers
-  if (/^[\d\s\.,:\-+%]+$/.test(cleanText)) return true;
+  if (/^[\d\s.,:+%-]+$/.test(cleanText)) return true;
   
   return false;
 }

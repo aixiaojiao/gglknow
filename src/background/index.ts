@@ -97,17 +97,19 @@ async function handleExtensionMessage(
 ): Promise<void> {
   try {
     switch (message.type) {
-      case MessageType.COLLECT_TWEET:
+      case MessageType.COLLECT_TWEET: {
         const collectMessage = message as CollectTweetMessage;
         const result = await handleCollectTweet(collectMessage.tweetData);
         sendResponse(result);
         break;
+      }
 
-      case MessageType.COLLECT_THREAD:
+      case MessageType.COLLECT_THREAD: {
         const collectThreadMessage = message as CollectThreadMessage;
         const threadResult = await handleCollectThread(collectThreadMessage.threadData);
         sendResponse(threadResult);
         break;
+      }
 
       case MessageType.TEST_CONNECTION:
         sendResponse({ 
@@ -122,16 +124,18 @@ async function handleExtensionMessage(
         sendResponse({ success: true });
         break;
 
-      case MessageType.GET_SETTINGS:
+      case MessageType.GET_SETTINGS: {
         const settings = await getSettings();
         sendResponse({ success: true, settings });
         break;
+      }
 
-      case MessageType.SAVE_SETTINGS:
+      case MessageType.SAVE_SETTINGS: {
         const saveMessage = message as SaveSettingsMessage;
         await saveSettings(saveMessage.settings);
         sendResponse({ success: true, message: '设置保存成功' });
         break;
+      }
 
       default:
         sendResponse({ success: false, error: 'Unknown message type' });
@@ -248,7 +252,7 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
   try {
     const mainTweet = threadData.mainTweet || threadData.tweets[0];
     if (!mainTweet) {
-      throw createError(ExtensionError.INVALID_TWEET_DATA, "线程数据为空或无效");
+      throw createError(ExtensionError.INVALID_TWEET_DATA, '线程数据为空或无效');
     }
 
     log('info', 'ServiceWorker', 'Starting thread collection', {

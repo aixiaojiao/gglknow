@@ -21,7 +21,7 @@ export function isThreadPage(): boolean {
   
   // Thread URL pattern: https://twitter.com/username/status/tweetId
   // or https://x.com/username/status/tweetId
-  const threadPattern = /(?:twitter\.com|x\.com)\/[^\/]+\/status\/\d+/;
+  const threadPattern = /(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/;
   
   return threadPattern.test(url);
 }
