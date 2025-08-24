@@ -18,6 +18,20 @@ export interface TweetMedia {
 }
 
 /**
+ * Inline media item that appears within tweet text
+ */
+export interface InlineMediaItem {
+  /** Type of media */
+  type: 'image' | 'video';
+  /** Media source URL */
+  src: string;
+  /** Index in the media array */
+  index: number;
+  /** Position relative to text */
+  position: 'inline' | 'end';
+}
+
+/**
  * Tweet interaction statistics
  */
 export interface TweetStats {
@@ -39,7 +53,7 @@ export interface TweetData {
   userHandle: string;
   /** User's avatar image URL */
   userAvatar: string;
-  /** Tweet text content */
+  /** Tweet text content (may contain HTML) */
   text: string;
   /** Tweet timestamp (ISO string) */
   timestamp: string;
@@ -53,6 +67,8 @@ export interface TweetData {
   media: TweetMedia;
   /** Interaction statistics */
   stats: TweetStats;
+  /** Inline media items that appear within the text content */
+  inlineMedia?: InlineMediaItem[];
 }
 
 /**

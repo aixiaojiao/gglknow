@@ -261,11 +261,42 @@ function createTweetHTMLBlock(
     videoPathMap: Map<string, string>
 ): string {
     const userAvatarPath = tweetData.userAvatar ? `media/avatar${getFileExtension(tweetData.userAvatar) || '.jpg'}` : '';
-    const imagePaths = (tweetData.media?.images || []).map(url => imagePathMap.get(url) || '');
-    const videoPaths = (tweetData.media?.videos || []).map(url => videoPathMap.get(url) || '');
+    
+    // Process text with inline media
+    let processedText = tweetData.text;
+    
+    if (tweetData.inlineMedia && tweetData.inlineMedia.length > 0) {
+        // Replace inline media placeholders with actual HTML
+        tweetData.inlineMedia.forEach((mediaItem) => {
+            const mediaPath = mediaItem.type === 'image' 
+                ? imagePathMap.get(mediaItem.src) 
+                : videoPathMap.get(mediaItem.src);
+                
+            if (mediaPath) {
+                const mediaHtml = mediaItem.type === 'image'
+                    ? `<img src="${mediaPath}" alt="内联图片" style="max-width: 100%; border-radius: 8px; margin: 8px 0; display: block;">`
+                    : `<video src="${mediaPath}" controls muted loop playsinline style="max-width: 100%; border-radius: 8px; margin: 8px 0; display: block;"></video>`;
+                
+                // Replace placeholder with actual media
+                const placeholder = `[${mediaItem.type === 'image' ? '图片' : '视频'}${mediaItem.index + 1}]`;
+                processedText = processedText.replace(placeholder, mediaHtml);
+            }
+        });
+    }
+    
+    // Handle remaining media (not inline)
+    const imagePaths = (tweetData.media?.images || []).filter(url => {
+        // Only include images that are not already inline
+        return !tweetData.inlineMedia?.some(item => item.src === url);
+    }).map(url => imagePathMap.get(url) || '').filter(path => path);
+    
+    const videoPaths = (tweetData.media?.videos || []).filter(url => {
+        // Only include videos that are not already inline
+        return !tweetData.inlineMedia?.some(item => item.src === url);
+    }).map(url => videoPathMap.get(url) || '').filter(path => path);
 
-    const mediaCount = imagePaths.length + videoPaths.length;
-    const mediaGridClass = getMediaGridClass(mediaCount);
+    const remainingMediaCount = imagePaths.length + videoPaths.length;
+    const mediaGridClass = getMediaGridClass(remainingMediaCount);
 
     return `
     <div class="tweet-card">
@@ -277,8 +308,8 @@ function createTweetHTMLBlock(
                     <p>@${tweetData.userHandle}</p>
                 </div>
             </div>
-            <div class="tweet-text">${tweetData.text}</div>
-            ${mediaCount > 0 ? `
+            <div class="tweet-text">${processedText}</div>
+            ${remainingMediaCount > 0 ? `
             <div class="tweet-media">
                 <div class="media-grid ${mediaGridClass}">
                     ${imagePaths.map(p => `<img src="${p}" loading="lazy">`).join('')}

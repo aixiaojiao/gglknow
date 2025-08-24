@@ -4,7 +4,7 @@
  * Extracts tweet data from Twitter/X page DOM elements
  */
 
-import { TweetData, TweetMedia, TweetStats } from '@/types';
+import { TweetData, TweetMedia, TweetStats, InlineMediaItem } from '@/types';
 import { log } from '@/utils';
 
 /**
@@ -141,7 +141,7 @@ function extractTweetContent(tweetElement: Element, data: TweetData): void {
     return;
   }
 
-  // Fall back to regular tweet content extraction
+  // Fall back to regular tweet content extraction with better format preservation
   const textSelectors = [
     '[data-testid="tweetText"]',
     'div[lang]',
@@ -165,14 +165,99 @@ function extractTweetContent(tweetElement: Element, data: TweetData): void {
   }
   
   if (tweetTextElement) {
-    data.text = tweetTextElement.textContent?.trim() || '';
+    // Extract HTML content while preserving structure and inline media
+    const preservedContent = extractTweetHTML(tweetTextElement);
+    data.text = preservedContent.htmlContent;
+    data.inlineMedia = preservedContent.inlineMedia; // Store inline media positions
   }
 
   log('info', 'TweetExtractor', 'Tweet content extracted', {
     hasText: !!data.text,
-    textLength: data.text.length
+    textLength: data.text?.length || 0,
+    hasInlineMedia: !!(data.inlineMedia && data.inlineMedia.length > 0)
   });
 }
+
+/**
+ * Extract HTML content while preserving formatting and inline media positions
+ */
+function extractTweetHTML(element: Element): { htmlContent: string; inlineMedia: InlineMediaItem[] } {
+  const inlineMedia: InlineMediaItem[] = [];
+  const clonedElement = element.cloneNode(true) as Element;
+  
+  // Find and process all images within the text
+  const images = clonedElement.querySelectorAll('img');
+  images.forEach((img, index) => {
+    const src = img.src;
+    if (src && !src.includes('emoji')) { // Skip emoji images
+      // Create a placeholder for the image
+      const placeholder = document.createElement('span');
+      placeholder.className = 'inline-media-placeholder';
+      placeholder.setAttribute('data-media-type', 'image');
+      placeholder.setAttribute('data-media-index', index.toString());
+      placeholder.setAttribute('data-media-src', src);
+      placeholder.textContent = `[图片${index + 1}]`;
+      
+      // Replace image with placeholder
+      img.parentNode?.replaceChild(placeholder, img);
+      
+      // Store media info
+      inlineMedia.push({
+        type: 'image',
+        src: src,
+        index: index,
+        position: 'inline'
+      });
+    }
+  });
+  
+  // Process videos
+  const videos = clonedElement.querySelectorAll('video');
+  videos.forEach((video, index) => {
+    const src = video.src || video.querySelector('source')?.src;
+    if (src) {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'inline-media-placeholder';
+      placeholder.setAttribute('data-media-type', 'video');
+      placeholder.setAttribute('data-media-index', index.toString());
+      placeholder.setAttribute('data-media-src', src);
+      placeholder.textContent = `[视频${index + 1}]`;
+      
+      video.parentNode?.replaceChild(placeholder, video);
+      
+      inlineMedia.push({
+        type: 'video',
+        src: src,
+        index: index,
+        position: 'inline'
+      });
+    }
+  });
+  
+  // Clean up the HTML while preserving structure
+  let htmlContent = clonedElement.innerHTML;
+  
+  // Preserve line breaks and paragraphs
+  htmlContent = htmlContent
+    .replace(/<div[^>]*>/gi, '<p>')
+    .replace(/<\/div>/gi, '</p>')
+    .replace(/<br[^>]*>/gi, '<br>')
+    .replace(/\n/g, '<br>');
+  
+  // Clean up excessive whitespace but preserve intentional formatting
+  htmlContent = htmlContent
+    .replace(/\s+/g, ' ')
+    .replace(/(<p>\s*<\/p>)/gi, '')
+    .replace(/(<p>\s*<br>\s*<\/p>)/gi, '<p></p>')
+    .trim();
+  
+  return {
+    htmlContent,
+    inlineMedia
+  };
+}
+
+
 
 /**
  * Check if element is likely the main tweet text
