@@ -130,6 +130,18 @@ function extractUserInfo(tweetElement: Element, data: TweetData): void {
  * Extract tweet text content
  */
 function extractTweetContent(tweetElement: Element, data: TweetData): void {
+  // First try to extract article content if this is a Twitter Article
+  const articleContent = extractArticleContent(tweetElement);
+  if (articleContent) {
+    data.text = articleContent;
+    log('info', 'TweetExtractor', 'Article content extracted', {
+      hasText: !!data.text,
+      textLength: data.text.length
+    });
+    return;
+  }
+
+  // Fall back to regular tweet content extraction
   const textSelectors = [
     '[data-testid="tweetText"]',
     'div[lang]',
@@ -320,6 +332,271 @@ export function findTweetElements(): Element[] {
   }
 
   return Array.from(elements);
+}
+
+/**
+ * Extract article content for Twitter Articles
+ */
+function extractArticleContent(tweetElement: Element): string | null {
+  try {
+    log('info', 'TweetExtractor', 'Attempting to extract article content');
+
+    // Try to find and click "Show more" or "显示更多" button to expand article content
+    const expandButtons: HTMLElement[] = [];
+    
+    // Look for elements with expand-related attributes
+    const ariaExpandButtons = tweetElement.querySelectorAll('[aria-label*="Show more"], [aria-label*="显示更多"]');
+    ariaExpandButtons.forEach(btn => btn instanceof HTMLElement && expandButtons.push(btn));
+    
+    // Look for elements with expand-related test ids
+    const testIdButtons = tweetElement.querySelectorAll('[data-testid*="expand"]');
+    testIdButtons.forEach(btn => btn instanceof HTMLElement && expandButtons.push(btn));
+    
+    // Look for buttons/spans with expand-related text content
+    const allButtons = tweetElement.querySelectorAll('div[role="button"], span[role="button"], button');
+    allButtons.forEach(el => {
+      if (el instanceof HTMLElement) {
+        const text = el.textContent?.toLowerCase() || '';
+        if (text.includes('show') || text.includes('more') || text.includes('expand') ||
+            text.includes('显示') || text.includes('更多') || text.includes('展开') ||
+            text.includes('read more') || text.includes('阅读更多')) {
+          expandButtons.push(el);
+        }
+      }
+    });
+
+    // Try to click expand button if found
+    for (const button of expandButtons) {
+      if (button && button instanceof HTMLElement) {
+        log('info', 'TweetExtractor', 'Found expand button, attempting to click');
+        try {
+          button.click();
+          break;
+        } catch (error) {
+          log('warn', 'TweetExtractor', 'Failed to click expand button', error);
+        }
+      }
+    }
+
+    // Article-specific content selectors - ordered by priority
+    const articleSelectors = [
+      // Twitter Article specific selectors
+      '[data-testid="article-wrapper"]',
+      '[data-testid="article-content"]',
+      '[data-testid="longform-tweet"]',
+      '[data-testid="tweetText"] div[dir]',
+      
+      // Look for containers with long text content
+      'div[lang][dir="auto"]',
+      'div[dir="ltr"][lang]',
+      'div[dir="auto"][lang]',
+      
+      // Generic text containers that might contain article content
+      'div[role="article"]',
+      'div[data-testid="tweetText"]',
+      
+      // More comprehensive selectors
+      'div[data-testid="tweetText"] *',
+      '[data-testid="tweetText"] span',
+      'article div[lang]',
+      'article span[lang]',
+      
+      // Fallback: any div or span with meaningful text
+      'div',
+      'span'
+    ];
+
+    let articleContent = '';
+    let bestElement: Element | null = null;
+    let maxLength = 0;
+    let candidateElements: Array<{element: Element, text: string, selector: string}> = [];
+
+    // Try each selector and find the one with the most content
+    for (const selector of articleSelectors) {
+      const elements = tweetElement.querySelectorAll(selector);
+      
+      for (const element of elements) {
+        const text = element.textContent?.trim() || '';
+        if (text.length > 10) {
+          candidateElements.push({element, text, selector});
+          
+          if (text.length > maxLength && isLikelyArticleContent(element, text)) {
+            maxLength = text.length;
+            bestElement = element;
+            articleContent = text;
+          }
+        }
+      }
+    }
+
+    // Try to get nested content if we found a good element
+    if (bestElement) {
+      // Look for paragraphs or text blocks within the article element
+      const textBlocks = bestElement.querySelectorAll('div, p, span');
+      const textParts: string[] = [];
+      const seenTexts = new Set<string>();
+      
+      for (const block of textBlocks) {
+        const blockText = block.textContent?.trim() || '';
+        if (blockText && 
+            blockText.length > 20 && 
+            !isUIElement(blockText) &&
+            !seenTexts.has(blockText) &&
+            !isPartOfLargerText(blockText, textParts)) {
+          textParts.push(blockText);
+          seenTexts.add(blockText);
+        }
+      }
+      
+      if (textParts.length > 0) {
+        // Clean and format the article content
+        articleContent = cleanAndFormatArticleContent(textParts);
+      }
+    }
+
+    // Validate if we got meaningful article content
+    if (articleContent && articleContent.length > 50) {
+      log('info', 'TweetExtractor', 'Article content extracted successfully', {
+        contentLength: articleContent.length,
+        hasMultipleParagraphs: articleContent.includes('\n')
+      });
+      return articleContent;
+    }
+
+    log('info', 'TweetExtractor', 'No article content found or content too short');
+    return null;
+
+  } catch (error) {
+    log('error', 'TweetExtractor', 'Failed to extract article content', error);
+    return null;
+  }
+}
+
+/**
+ * Check if element likely contains article content
+ */
+function isLikelyArticleContent(element: Element, text: string): boolean {
+  // Must have some content
+  if (text.length < 20) return false;
+
+  // Skip if it's clearly UI elements
+  if (isUIElement(text)) return false;
+
+  // Skip if it's inside a link (not main content) - but allow some flexibility
+  if (element.closest('a') && text.length < 50) return false;
+
+  // Skip if it's a time element
+  if (element.closest('time')) return false;
+
+  // Skip if it's user info
+  if (element.closest('[data-testid="User-Names"]') || 
+      element.closest('[data-testid="User-Avatar"]')) return false;
+
+  // Prefer elements with language attributes (actual content)
+  if (element.hasAttribute('lang') || element.hasAttribute('dir')) {
+    return true;
+  }
+
+  // Check if parent has content indicators
+  const parent = element.parentElement;
+  if (parent && (parent.hasAttribute('lang') || parent.hasAttribute('dir'))) {
+    return true;
+  }
+
+  // Accept any text longer than 50 characters
+  return text.length > 50;
+}
+
+/**
+ * Check if text is likely a UI element rather than content
+ */
+function isUIElement(text: string): boolean {
+  const cleanText = text.trim();
+  
+  const uiPatterns = [
+    /^\d+$/, // Just numbers
+    /^@\w+$/, // Username
+    /^\d+[hms]$/, // Time like "2h", "30m"
+    /^\d{1,2}:\d{2}$/, // Time like "14:30"
+    /^(回复|转发|点赞|关注|已关注|收藏|收藏中|收藏串)/, // Chinese UI elements (allow partial matches)
+    /^(Reply|Retweet|Like|Follow|Following|Save|Saving)$/i, // English UI elements
+    /^已置顶$/, // "Pinned" in Chinese
+    /^Pinned$/i, // "Pinned" in English
+    /^(想发布自己的文章|升级为|Premium)/, // Premium prompts
+    /^(下午|上午|AM|PM)\d/, // Time stamps
+    /^\d+\.?\d*万?\s*(查看|回复|转推|点赞)/, // Engagement numbers (improved)
+    /^\d{4}年\d{1,2}月\d{1,2}日/, // Chinese date format
+    /^Theclues@follow_clues$/, // User handle repetition
+    /^\d{10,}$/, // Very long numbers (like timestamps or IDs)
+    /^[\s\n\r]*$/, // Empty or whitespace-only
+    /^[·\s]*$/, // Just dots and spaces
+  ];
+
+  // Check if it's too short to be meaningful content
+  if (cleanText.length < 10) return true;
+  
+  // Check if it matches UI patterns
+  if (uiPatterns.some(pattern => pattern.test(cleanText))) return true;
+  
+  // Check if it's mostly punctuation or numbers
+  if (/^[\d\s\.,:\-+%]+$/.test(cleanText)) return true;
+  
+  return false;
+}
+
+/**
+ * Check if a text is part of a larger text already in the collection
+ */
+function isPartOfLargerText(text: string, existingTexts: string[]): boolean {
+  return existingTexts.some(existing => 
+    existing.includes(text) || text.includes(existing)
+  );
+}
+
+/**
+ * Clean and format article content
+ */
+function cleanAndFormatArticleContent(textParts: string[]): string {
+  // Sort by length descending to prioritize longer, more complete texts
+  const sortedParts = textParts.sort((a, b) => b.length - a.length);
+  
+  // Take the longest text as the main content
+  let mainContent = sortedParts[0] || '';
+  
+  // Remove UI elements and clean up
+  mainContent = mainContent
+    // Remove user handles that appear at the beginning
+    .replace(/^(已置顶)?(Theclues@follow_clues)+/g, '')
+    // Remove trailing UI elements (more comprehensive)
+    .replace(/(想发布自己的文章？升级为\s*Premium\+.*?)$/gs, '')
+    .replace(/(下午|上午)\d{1,2}:\d{2}\s*·\s*\d{4}年\d{1,2}月\d{1,2}日.*?$/gs, '')
+    // Remove engagement numbers and view counts (more patterns)
+    .replace(/\d+\.?\d*万?\s*(查看|回复|转推|点赞)\s*\d*$/gm, '')
+    .replace(/\d{10,}\s*$/gm, '') // Remove long number sequences
+    .replace(/收藏中\.{3}/g, '') // Remove "收藏中..."
+    .replace(/收藏串/g, '') // Remove "收藏串"
+    .replace(/升级为\s*Premium\+/g, '') // Remove Premium prompts
+    // Remove HTML-like content and whitespace
+    .replace(/\s*<[^>]*>\s*/g, ' ') // Remove any HTML tags
+    .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Clean up multiple newlines
+    // Remove trailing whitespace and empty lines
+    .replace(/\s+$/gm, '') // Remove trailing spaces from each line
+    .trim();
+
+  // Add proper paragraph breaks for better readability
+  mainContent = mainContent
+    // Add breaks before numbered sections
+    .replace(/(\d+\.\s*)/g, '\n\n$1')
+    // Add breaks before key sections
+    .replace(/(初始状态：|行动：|计算.*?后的情况|为什么)/g, '\n\n$1')
+    // Add breaks before explanations
+    .replace(/(表面上看|但这里隐藏|并非真实增值|溢价压缩是预警|数学本质)/g, '\n\n$1')
+    // Clean up multiple breaks again
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return mainContent;
 }
 
 export default {
