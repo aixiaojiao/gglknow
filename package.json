@@ -1,6 +1,6 @@
 {
   "name": "gglknow",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "description": "A Chrome extension to save tweets locally.",
   "type": "module",
   "scripts": {

@@ -3,85 +3,145 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>帮助文档 - Twitter推文收藏器</title>
+  <title>帮助文档 - GglKnow 推文收藏器</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
+      line-height: 1.7;
+      color: #3a3a3a;
       max-width: 800px;
-      margin: 0 auto;
+      margin: 20px auto;
       padding: 20px;
-      background-color: #f7f9fa;
+      background-color: #f9f9f9;
     }
     .container {
       background-color: white;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
     }
     h1, h2, h3 {
       color: #1da1f2;
       border-bottom: 2px solid #e1e8ed;
-      padding-bottom: 10px;
-      margin-top: 20px;
+      padding-bottom: 12px;
+      margin-top: 25px;
     }
-    h1 { font-size: 2em; }
-    h2 { font-size: 1.5em; }
+    h1 { 
+      font-size: 2.2em; 
+      text-align: center;
+      border: none;
+      margin-bottom: 20px;
+    }
+    h2 { font-size: 1.6em; }
+    h3 { 
+      font-size: 1.2em; 
+      color: #17bf63;
+      border-bottom: 1px dashed #ddd;
+    }
     p, li {
       font-size: 1.1em;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     code {
-      background-color: #e1e8ed;
-      padding: 2px 6px;
+      background-color: #e8f5fd;
+      padding: 3px 7px;
+      border-radius: 5px;
+      font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+      color: #1c94e0;
+      border: 1px solid #d1e7f7;
+    }
+    .badge {
+      background-color: #ff4500;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.8em;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+    .tip {
+      background-color: #fffbe6;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
       border-radius: 4px;
-      font-family: 'Courier New', Courier, monospace;
     }
     .footer {
-      margin-top: 40px;
+      margin-top: 50px;
       text-align: center;
-      font-size: 0.9em;
-      color: #657786;
+      font-size: 0.95em;
+      color: #888;
+    }
+    a {
+      color: #1da1f2;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>帮助文档 - Twitter推文收藏器</h1>
+    <h1>GglKnow 推文收藏器 帮助文档</h1>
 
-    <h2>功能简介</h2>
-    <p>本扩展程序旨在帮助您轻松收藏和存档您在 Twitter/X 上喜欢的推文。只需一键，即可将推文的文本、图片和视频完整地保存到您的本地电脑中。</p>
-
-    <h2>如何使用</h2>
+    <h2>🚀 快速上手</h2>
     <ol>
-      <li>在 Twitter/X 网站上，找到您想要收藏的推文。</li>
-      <li>点击推文下方由本扩展添加的“收藏”按钮。</li>
-      <li>浏览器将自动开始下载推文的相关文件。</li>
+      <li>点击浏览器工具栏的插件图标，打开设置弹窗。</li>
+      <li>**务必先设置“保存路径”**，这是所有收藏内容存放的位置。</li>
+      <li>在 Twitter/X 网站上，找到推文下方的“收藏”或“收藏串”按钮。</li>
+      <li>点击即可将推文（或整个推文串）完整保存到你设置的路径中。</li>
     </ol>
 
-    <h2>设置说明</h2>
-    <p>点击浏览器工具栏中的扩展图标，可以打开设置面板。</p>
+    <h2>的核心功能</h2>
+    <h3>1. 收藏单个推文 / 推文文章<span class="badge">V2.1.5 新增</span></h3>
+    <p>在任意普通推文或长篇推文文章下方，点击蓝色的 **“收藏”** 按钮，即可将当前推文的完整内容、图片和视频保存下来。</p>
+
+    <h3>2. 收藏推文串 (Thread)</h3>
+    <p>当一条推文是某个推文串的一部分时，你会看到一个额外的 **“收藏串”** 按钮。点击它，扩展会自动遍历并保存整个串的所有推文。</p>
+
+    <h3>3. 推文浏览器</h3>
+    <p>一个内置的本地工具，用于浏览和管理你所有收藏过的推文。在插件弹窗中点击 **“打开推文浏览器”** 即可进入。功能包括：</p>
     <ul>
-      <li><strong>保存路径：</strong>设置您希望文件保存到的文件夹路径。例如：<code>Downloads/MyTweets</code>。</li>
-      <li><strong>文件格式：</strong>您可以选择同时保存多种格式的文件：
-        <ul>
-          <li><code>HTML</code>: 生成一个带样式的独立网页，方便直接浏览。</li>
-          <li><code>JSON</code>: 保存完整的推文原始数据，适合开发者或数据备份。</li>
-          <li><code>Markdown</code>: 生成一个 .md 文件，方便导入到笔记软件中。</li>
-        </ul>
-      </li>
-      <li><strong>下载媒体文件：</strong>勾选此项，会自动下载推文中的图片和视频。</li>
+      <li><strong>内容浏览</strong>: 集中展示所有推文，格式与 Twitter 类似。</li>
+      <li><strong>搜索与筛选</strong>: 支持按关键词、作者、时间范围进行筛选和排序。</li>
+      <li><strong>图片恢复</strong>: 由于浏览器安全限制，图片可能无法自动加载。点击 **“🔄 Reload Images”** 按钮并重新选择你当初设置的保存文件夹，即可恢复所有图片显示。</li>
     </ul>
 
-    <h2>常见问题</h2>
+    <h2>⚙️ 设置详解</h2>
+    <ul>
+      <li><strong>保存路径：</strong>设置文件保存的文件夹。
+        <div class="tip">
+          <strong>路径小贴士：</strong>
+          <br>- **Windows 用户**: 可以使用 <code>D:\Twitter-Saves</code> 这样的绝对路径，或者 <code>Downloads\Tweets</code> 这样的相对路径（相对于浏览器默认下载目录）。
+          <br>- **macOS / Linux 用户**: 可以使用 <code>/Users/YourName/Twitter</code> 这样的绝对路径。
+        </div>
+      </li>
+      <li><strong>文件格式：</strong>可多选，满足不同需求：
+        <ul>
+          <li><code>HTML</code>: 最佳选择，生成带样式的网页，保留原始排版，浏览体验最好。</li>
+          <li><code>JSON</code>: 包含所有原始数据，适合数据备份或二次开发。</li>
+          <li><code>Markdown</code>: 纯文本格式，方便导入到 Notion、Obsidian 等笔记软件。</li>
+        </ul>
+      </li>
+      <li><strong>下载媒体文件：</strong>默认开启，会自动下载推文中的所有图片和视频。</li>
+    </ul>
+
+    <h2>常见问题 (FAQ)</h2>
     <h3>问：为什么点击“收藏”后没有反应？</h3>
-    <p>答：请先在设置面板中确保您已经填写了“保存路径”，并且至少选择了一种文件格式。</p>
-    <h3>问：如果我更新了扩展，按钮点击无效怎么办？</h3>
-    <p>答：这是因为扩展的“上下文”失效了。请在更新扩展后，<strong>手动刷新一下 Twitter/X 的网页</strong>，问题即可解决。</p>
+    <p>答：最常见的原因是 **没有设置“保存路径”**。请打开插件设置，确保该项已填写。</p>
+    
+    <h3>问：更新扩展后，收藏按钮点击无效怎么办？</h3>
+    <p>答：这是因为扩展更新后上下文失效了。请 **刷新一下 Twitter/X 的网页**，按钮就会恢复正常。</p>
+
+    <h3>问：推文浏览器里的图片不显示，怎么办？</h3>
+    <p>答：这是正常的浏览器安全机制。请点击浏览器顶部的 **“🔄 Reload Images”** 按钮，在弹出的窗口中选择你设置的保存文件夹，所有图片就会立刻显示出来。</p>
+
+    <h3>问：收藏下来的推文文章格式错乱？</h3>
+    <p>答：我们已在 V2.1.5 版本中对文章格式进行了大幅优化。请确保你的扩展已更新到最新版。如果问题依旧，欢迎通过 GitHub 向我们报告。</p>
 
     <div class="footer">
-      <p>感谢您的使用！</p>
+      <p>感谢您的使用！遇到任何问题或有功能建议，欢迎访问我们的 <a href="https://github.com/aixiaojiao/gglknow" target="_blank">GitHub 仓库</a> 提交 Issue。</p>
     </div>
   </div>
 </body>
