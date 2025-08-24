@@ -251,8 +251,80 @@ function extractMediaData(tweetElement: Element, data: TweetData): void {
   // Extract videos
   const videos = tweetElement.querySelectorAll('video') as NodeListOf<HTMLVideoElement>;
   for (const video of videos) {
-    if (video.src && !media.videos.includes(video.src)) {
+    // Check video.src first
+    if (video.src && !video.src.startsWith('blob:') && !media.videos.includes(video.src)) {
       media.videos.push(video.src);
+    }
+    
+    // Check source elements within video
+    const sources = video.querySelectorAll('source') as NodeListOf<HTMLSourceElement>;
+    for (const source of sources) {
+      if (source.src && !source.src.startsWith('blob:') && !media.videos.includes(source.src)) {
+        media.videos.push(source.src);
+      }
+    }
+    
+    // Check data attributes that might contain video URLs
+    const dataAttributes = ['data-src', 'data-video-url', 'data-url'];
+    for (const attr of dataAttributes) {
+      const url = video.getAttribute(attr);
+      if (url && !url.startsWith('blob:') && !media.videos.includes(url)) {
+        media.videos.push(url);
+      }
+    }
+  }
+  
+  // Also check for video URLs in div elements with video-related attributes
+  const videoContainers = tweetElement.querySelectorAll('[data-testid="videoComponent"], [data-testid="videoPlayer"]');
+  for (const container of videoContainers) {
+    const videoUrl = container.getAttribute('data-video-url') || 
+                     container.getAttribute('data-src') ||
+                     container.getAttribute('data-url');
+    if (videoUrl && !videoUrl.startsWith('blob:') && !media.videos.includes(videoUrl)) {
+      media.videos.push(videoUrl);
+    }
+  }
+  
+  // Try to extract video URLs from script tags or inline data
+  try {
+    // Look for JSON data that might contain video information
+    const scriptTags = document.querySelectorAll('script');
+    for (const script of scriptTags) {
+      const content = script.textContent || script.innerHTML;
+      if (content && content.includes('video_info')) {
+        // Try to extract video URLs from Twitter's video_info data
+        const videoUrlMatches = content.match(/"url":"([^"]*\.mp4[^"]*)"/g);
+        if (videoUrlMatches) {
+          videoUrlMatches.forEach(match => {
+            const url = match.match(/"url":"([^"]*)"/)?.[1];
+            if (url) {
+              const decodedUrl = decodeURIComponent(url.replace(/\\u[\dA-F]{4}/gi, (match) => {
+                return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
+              }));
+              if (decodedUrl && !media.videos.includes(decodedUrl)) {
+                media.videos.push(decodedUrl);
+              }
+            }
+          });
+        }
+      }
+    }
+  } catch (error) {
+    log('warn', 'TweetExtractor', 'Failed to extract video URLs from scripts', error);
+  }
+  
+  // Check for poster images that might indicate videos
+  const posterImages = tweetElement.querySelectorAll('img[src*="video_thumb"], img[src*="tweet_video_thumb"]');
+  for (const img of posterImages) {
+    // Try to find associated video by looking at parent elements
+    const videoParent = img.closest('[data-testid="videoComponent"]') || img.closest('div[role="button"]');
+    if (videoParent) {
+      // Look for video URL in onclick or other attributes
+      const onclickAttr = videoParent.getAttribute('onclick') || '';
+      const videoUrlMatch = onclickAttr.match(/https?:\/\/[^\s"']+\.mp4[^\s"']*/);
+      if (videoUrlMatch && !media.videos.includes(videoUrlMatch[0])) {
+        media.videos.push(videoUrlMatch[0]);
+      }
     }
   }
 
