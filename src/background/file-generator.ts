@@ -22,7 +22,7 @@ export async function generateFile(
   try {
     log('info', 'FileGenerator', `Generating ${format} file`, {
       user: tweetData.userName,
-      hasMedia: tweetData.media.images.length > 0 || tweetData.media.videos.length > 0
+      hasMedia: tweetData.media.images.length > 0
     });
     
     switch (format) {

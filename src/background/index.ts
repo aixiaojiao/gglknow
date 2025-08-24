@@ -157,7 +157,7 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
     log('info', 'ServiceWorker', 'Starting tweet collection', {
       user: tweetData.userName,
       hasText: !!tweetData.text,
-      hasMedia: tweetData.media.images.length > 0 || tweetData.media.videos.length > 0
+      hasMedia: tweetData.media.images.length > 0
     });
 
     // Validate tweet data

@@ -110,7 +110,7 @@ export function validateTweetData(tweetData: TweetData): ExtensionErrorInfo | nu
     };
   }
   
-  if (!tweetData.text && (!tweetData.media || (tweetData.media.images.length === 0 && tweetData.media.videos.length === 0))) {
+  if (!tweetData.text && (!tweetData.media || tweetData.media.images.length === 0)) {
     return {
       type: ExtensionError.INVALID_TWEET_DATA,
       message: '推文内容和媒体都为空'

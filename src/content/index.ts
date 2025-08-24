@@ -135,7 +135,7 @@ class TwitterCollector {
       log('info', 'TwitterCollector', 'Tweet data extracted', {
         user: tweetData.userName,
         hasText: !!tweetData.text,
-        mediaCount: tweetData.media.images.length + tweetData.media.videos.length
+        mediaCount: tweetData.media.images.length
       });
 
       // Validate extracted data

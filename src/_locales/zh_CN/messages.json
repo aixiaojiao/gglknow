@@ -40,7 +40,7 @@
     "description": "文件格式复选框的标签。"
   },
   "settingsDownloadMedia": {
-    "message": "下载媒体文件（图片、视频、头像）",
+    "message": "下载媒体文件（图片、头像）",
     "description": "下载媒体复选框的标签。"
   },
   "actionsSectionTitle": {

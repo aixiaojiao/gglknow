@@ -18,7 +18,6 @@ export async function downloadMediaFiles(
   try {
     log('info', 'MediaDownloader', 'Starting media download', {
       images: mediaData.images.length,
-      videos: mediaData.videos.length,
       hasAvatar: !!mediaData.avatar
     });
 
@@ -35,16 +34,7 @@ export async function downloadMediaFiles(
       );
     });
 
-    // Download videos
-    mediaData.videos.forEach((videoUrl, index) => {
-      const extension = getFileExtension(videoUrl) || '.mp4';
-      const filename = `video_${index + 1}${extension}`;
-      const fullPath = `${savePath}/${baseFileName}/media/${filename}`;
-      
-      downloadPromises.push(
-        downloadFile(videoUrl, fullPath, `视频 ${index + 1}`)
-      );
-    });
+    // Note: Video download has been disabled to keep the extension lightweight and focused
 
     // Download avatar
     if (mediaData.avatar) {

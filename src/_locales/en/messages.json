@@ -40,7 +40,7 @@
     "description": "Label for file format checkboxes."
   },
   "settingsDownloadMedia": {
-    "message": "Download media (images, videos, avatars)",
+    "message": "Download media (images, avatars)",
     "description": "Label for download media checkbox."
   },
   "actionsSectionTitle": {
