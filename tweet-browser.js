@@ -251,12 +251,9 @@ class TweetBrowser {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        const userNameEl = doc.querySelector('.user-details h2');
-        const userHandleEl = doc.querySelector('.user-details p');
-        const tweetTextEl = doc.querySelector('.tweet-text');
-        const imageEls = Array.from(doc.querySelectorAll('.media-item img, .media-item video'));
-        const tweetUrlEl = doc.querySelector('.view-original-btn');
-        const avatarImgEl = doc.querySelector('.avatar');
+        // 检测是否是推文串（包含多个 tweet-card 块）
+        const tweetCards = Array.from(doc.querySelectorAll('.tweet-card'));
+        const isThread = tweetCards.length > 1;
         
         const getRelativePath = (src, basePath) => {
             if (!src || !basePath) return '';
@@ -272,38 +269,113 @@ class TweetBrowser {
             return baseDir ? `${baseDir}/${cleanedSrc}` : cleanedSrc;
         };
 
-        let timestamp = new Date().toISOString();
-        const timeEl = doc.querySelector('.meta-item span:last-child');
-        if (timeEl) {
-            const timeText = timeEl.textContent.trim();
-            const date = new Date(timeText);
-             if (!isNaN(date)) timestamp = date.toISOString();
-        }
+        if (isThread) {
+            // 处理推文串：解析所有推文并合并
+            const threadTweets = tweetCards.map(card => {
+                const userNameEl = card.querySelector('.user-details h2');
+                const userHandleEl = card.querySelector('.user-details p');
+                const tweetTextEl = card.querySelector('.tweet-text');
+                const imageEls = Array.from(card.querySelectorAll('.media-item img, .media-item video'));
+                const tweetUrlEl = card.querySelector('.view-original-btn');
+                const avatarImgEl = card.querySelector('.avatar');
+                
+                let timestamp = new Date().toISOString();
+                const timeEl = card.querySelector('.meta-item span:last-child');
+                if (timeEl) {
+                    const timeText = timeEl.textContent.trim();
+                    const date = new Date(timeText);
+                    if (!isNaN(date)) timestamp = date.toISOString();
+                }
 
-        const getStat = (label) => {
-            const statElements = Array.from(doc.querySelectorAll('.stat'));
-            const targetStat = statElements.find(el => el.querySelector('.stat-label')?.textContent.trim() === label);
-            return targetStat?.querySelector('.stat-number')?.textContent.trim() || '0';
-        }
+                const getStat = (label) => {
+                    const statElements = Array.from(card.querySelectorAll('.stat'));
+                    const targetStat = statElements.find(el => el.querySelector('.stat-label')?.textContent.trim() === label);
+                    return targetStat?.querySelector('.stat-number')?.textContent.trim() || '0';
+                }
 
-        return {
-            userName: userNameEl ? userNameEl.textContent.trim() : chrome.i18n.getMessage('unknownUser'),
-            userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
-            text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
-            timestamp: timestamp,
-            userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
-            media: { 
-                images: imageEls.filter(el => el.tagName === 'IMG').map(img => getRelativePath(img.getAttribute('src'), filePath)), 
-                videos: imageEls.filter(el => el.tagName === 'VIDEO').map(vid => getRelativePath(vid.getAttribute('src'), filePath)), 
-            },
-            stats: { 
-                replies: getStat('Replies'),
-                retweets: getStat('Retweets'),
-                likes: getStat('Likes')
-            },
-            tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
-            url: ''
-        };
+                return {
+                    userName: userNameEl ? userNameEl.textContent.trim() : chrome.i18n.getMessage('unknownUser'),
+                    userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
+                    text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
+                    timestamp: timestamp,
+                    userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
+                    media: { 
+                        images: imageEls.filter(el => el.tagName === 'IMG').map(img => getRelativePath(img.getAttribute('src'), filePath)), 
+                        videos: imageEls.filter(el => el.tagName === 'VIDEO').map(vid => getRelativePath(vid.getAttribute('src'), filePath)), 
+                    },
+                    stats: { 
+                        replies: getStat('Replies'),
+                        retweets: getStat('Retweets'),
+                        likes: getStat('Likes')
+                    },
+                    tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
+                };
+            });
+
+            // 使用第一条推文的信息作为主要信息，但合并所有推文内容
+            const mainTweet = threadTweets[0];
+            const allImages = [];
+            const allTexts = [];
+            
+            threadTweets.forEach(tweet => {
+                if (tweet.text) allTexts.push(tweet.text);
+                if (tweet.media?.images) allImages.push(...tweet.media.images);
+            });
+
+            return {
+                ...mainTweet,
+                text: allTexts.join('<br><br>'),
+                media: {
+                    images: allImages,
+                    videos: []
+                },
+                isThread: true,
+                threadTweets: threadTweets,
+                url: ''
+            };
+        } else {
+            // 处理单个推文
+            const userNameEl = doc.querySelector('.user-details h2');
+            const userHandleEl = doc.querySelector('.user-details p');
+            const tweetTextEl = doc.querySelector('.tweet-text');
+            const imageEls = Array.from(doc.querySelectorAll('.media-item img, .media-item video'));
+            const tweetUrlEl = doc.querySelector('.view-original-btn');
+            const avatarImgEl = doc.querySelector('.avatar');
+
+            let timestamp = new Date().toISOString();
+            const timeEl = doc.querySelector('.meta-item span:last-child');
+            if (timeEl) {
+                const timeText = timeEl.textContent.trim();
+                const date = new Date(timeText);
+                if (!isNaN(date)) timestamp = date.toISOString();
+            }
+
+            const getStat = (label) => {
+                const statElements = Array.from(doc.querySelectorAll('.stat'));
+                const targetStat = statElements.find(el => el.querySelector('.stat-label')?.textContent.trim() === label);
+                return targetStat?.querySelector('.stat-number')?.textContent.trim() || '0';
+            }
+
+            return {
+                userName: userNameEl ? userNameEl.textContent.trim() : chrome.i18n.getMessage('unknownUser'),
+                userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
+                text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
+                timestamp: timestamp,
+                userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
+                media: { 
+                    images: imageEls.filter(el => el.tagName === 'IMG').map(img => getRelativePath(img.getAttribute('src'), filePath)), 
+                    videos: imageEls.filter(el => el.tagName === 'VIDEO').map(vid => getRelativePath(vid.getAttribute('src'), filePath)), 
+                },
+                stats: { 
+                    replies: getStat('Replies'),
+                    retweets: getStat('Retweets'),
+                    likes: getStat('Likes')
+                },
+                tweetUrl: tweetUrlEl ? tweetUrlEl.href : '',
+                isThread: false,
+                url: ''
+            };
+        }
     }
     
     async resolveMediaPaths(tweetData) {
@@ -459,6 +531,7 @@ class TweetBrowser {
                     <div class="user-info">
                         <h4>${this.escapeHtml(userName)}</h4>
                         <span class="user-handle">@${this.escapeHtml(userHandle)}</span>
+                        ${tweet.isThread ? `<span style="background: #1da1f2; color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 2px; display: inline-block;">🧵 推文串 (${tweet.threadTweets?.length || 0}条)</span>` : ''}
                     </div>
                 </div>
                 <p class="tweet-text">${text}</p>
@@ -831,41 +904,104 @@ function showTweetDetail(index) {
                ${(tweet.userName || 'U').charAt(0).toUpperCase()}
            </div>`;
 
-    modalContent.innerHTML = `
-        <div style="padding: 30px;">
-            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                ${avatarHtml}
-                <div>
-                    <h3 style="margin: 0; color: #14171a;">${browser.escapeHtml(tweet.userName)}</h3>
-                    <div style="color: #657786;">@${browser.escapeHtml(tweet.userHandle)}</div>
-                </div>
-            </div>
-            
-            <div style="font-size: 18px; line-height: 1.6; color: #14171a; margin-bottom: 20px; white-space: pre-wrap;">
-                ${tweet.text}
-            </div>
-            
-            ${(tweet.displayImageUrls && tweet.displayImageUrls.length > 0) ? `
-                <div style="margin: 20px 0;">
-                    <h4 style="margin-bottom: 10px;">📷 图片</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                        ${tweet.displayImageUrls.map(img => `<img src="${img}" style="width: 100%; border-radius: 8px;" alt="推文图片">`).join('')}
+    // 如果是推文串，显示特殊的布局
+    if (tweet.isThread && tweet.threadTweets) {
+        const threadContent = tweet.threadTweets.map((threadTweet, i) => `
+            <div style="border: 1px solid #e1e8ed; border-radius: 12px; padding: 20px; margin-bottom: 15px; background: ${i === 0 ? '#f8f9ff' : 'white'};">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <div style="width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, #1da1f2, #1991db); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; margin-right: 12px;">
+                        ${i + 1}
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 14px; color: #14171a;">${browser.escapeHtml(threadTweet.userName)}</h4>
+                        <p style="margin: 2px 0 0 0; color: #657786; font-size: 12px;">@${browser.escapeHtml(threadTweet.userHandle)}</p>
                     </div>
                 </div>
-            ` : ''}
-            
-            <div style="display: flex; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;">
-                <span>💬 ${tweet.stats?.replies || '0'} 回复</span>
-                <span>🔁 ${tweet.stats?.retweets || '0'} 转推</span>
-                <span>❤️ ${tweet.stats?.likes || '0'} 点赞</span>
+                
+                <div style="margin: 12px 0; font-size: 15px; line-height: 1.5; color: #14171a;">
+                    ${threadTweet.text || ''}
+                </div>
+                
+                ${(threadTweet.media?.images && threadTweet.media.images.length > 0) ? `
+                    <div style="margin: 12px 0;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+                            ${threadTweet.media.images.map(img => {
+                                // 查找对应的显示URL
+                                const imgIndex = tweet.media?.images?.indexOf(img) || 0;
+                                const displayUrl = tweet.displayImageUrls?.[imgIndex] || img;
+                                return `<img src="${displayUrl}" style="width: 100%; border-radius: 6px;" alt="推文图片">`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
-            
-            <div style="margin-top: 15px; text-align: center; color: #657786; font-size: 12px;">
-                收藏时间: ${new Date(tweet.timestamp).toLocaleString('zh-CN')}
-                ${tweet.tweetUrl ? `<br><a href="${tweet.tweetUrl}" target="_blank" style="color: #1da1f2;">查看原推文</a>` : ''}
+        `).join('');
+
+        modalContent.innerHTML = `
+            <div style="padding: 30px;">
+                <div style="display: flex; align-items: center; margin-bottom: 25px;">
+                    ${avatarHtml}
+                    <div>
+                        <h3 style="margin: 0; color: #14171a;">${browser.escapeHtml(tweet.userName)}</h3>
+                        <div style="color: #657786;">@${browser.escapeHtml(tweet.userHandle)}</div>
+                        <span style="background: #1da1f2; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-top: 5px; display: inline-block;">🧵 推文串 (${tweet.threadTweets.length}条)</span>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; max-height: 60vh; overflow-y: auto;">
+                    ${threadContent}
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;">
+                    <span>💬 ${tweet.stats?.replies || '0'} 回复</span>
+                    <span>🔁 ${tweet.stats?.retweets || '0'} 转推</span>
+                    <span>❤️ ${tweet.stats?.likes || '0'} 点赞</span>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center; color: #657786; font-size: 12px;">
+                    收藏时间: ${new Date(tweet.timestamp).toLocaleString('zh-CN')}
+                    ${tweet.tweetUrl ? `<br><a href="${tweet.tweetUrl}" target="_blank" style="color: #1da1f2;">查看原推文</a>` : ''}
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    } else {
+        // 显示单个推文
+        modalContent.innerHTML = `
+            <div style="padding: 30px;">
+                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                    ${avatarHtml}
+                    <div>
+                        <h3 style="margin: 0; color: #14171a;">${browser.escapeHtml(tweet.userName)}</h3>
+                        <div style="color: #657786;">@${browser.escapeHtml(tweet.userHandle)}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 18px; line-height: 1.6; color: #14171a; margin-bottom: 20px; white-space: pre-wrap;">
+                    ${tweet.text}
+                </div>
+                
+                ${(tweet.displayImageUrls && tweet.displayImageUrls.length > 0) ? `
+                    <div style="margin: 20px 0;">
+                        <h4 style="margin-bottom: 10px;">📷 图片</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                            ${tweet.displayImageUrls.map(img => `<img src="${img}" style="width: 100%; border-radius: 8px;" alt="推文图片">`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div style="display: flex; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;">
+                    <span>💬 ${tweet.stats?.replies || '0'} 回复</span>
+                    <span>🔁 ${tweet.stats?.retweets || '0'} 转推</span>
+                    <span>❤️ ${tweet.stats?.likes || '0'} 点赞</span>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center; color: #657786; font-size: 12px;">
+                    收藏时间: ${new Date(tweet.timestamp).toLocaleString('zh-CN')}
+                    ${tweet.tweetUrl ? `<br><a href="${tweet.tweetUrl}" target="_blank" style="color: #1da1f2;">查看原推文</a>` : ''}
+                </div>
+            </div>
+        `;
+    }
     
     modal.style.display = 'block';
 }
