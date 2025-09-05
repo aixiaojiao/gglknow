@@ -5,7 +5,7 @@
  */
 
 import { MediaToDownload, ExtensionError } from '@/types';
-import { getFileExtension, createError, log } from '@/utils';
+import { getFileExtension, createError, log, joinPath } from '@/utils';
 
 /**
  * Download all media files for a tweet
@@ -27,7 +27,7 @@ export async function downloadMediaFiles(
     mediaData.images.forEach((imageUrl, index) => {
       const extension = getFileExtension(imageUrl) || '.jpg';
       const filename = `image_${index + 1}${extension}`;
-      const fullPath = `${savePath}/${baseFileName}/media/${filename}`;
+      const fullPath = joinPath(savePath, baseFileName, 'media', filename);
       
       downloadPromises.push(
         downloadFile(imageUrl, fullPath, `图片 ${index + 1}`)
@@ -40,7 +40,7 @@ export async function downloadMediaFiles(
     if (mediaData.avatar) {
       const extension = getFileExtension(mediaData.avatar) || '.jpg';
       const filename = `avatar${extension}`;
-      const fullPath = `${savePath}/${baseFileName}/media/${filename}`;
+      const fullPath = joinPath(savePath, baseFileName, 'media', filename);
       
       downloadPromises.push(
         downloadFile(mediaData.avatar, fullPath, '头像')
@@ -142,7 +142,7 @@ export async function downloadTweetFile(
       reader.readAsDataURL(blob);
     });
 
-    const fullPath = `${savePath}/${filename}/${filename}${extension}`;
+    const fullPath = joinPath(savePath, filename, `${filename}${extension}`);
 
     await downloadFile(url, fullPath, '推文文件');
 

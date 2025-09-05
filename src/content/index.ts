@@ -258,18 +258,21 @@ class TwitterCollector {
    * Get short error message for UI display
    */
   private getShortErrorMessage(errorMessage: string): string {
-    if (errorMessage.includes('context invalidated')) {
-      return chrome.i18n.getMessage('errorRefreshPage');
+    // Check if context is still valid before using chrome.i18n
+    const contextValid = checkExtensionContext();
+    
+    if (errorMessage.includes('context invalidated') || errorMessage.includes('扩展已重新加载')) {
+      return contextValid ? (chrome.i18n.getMessage('errorRefreshPage') || '请刷新页面') : '请刷新页面';
     } else if (errorMessage.includes('设置') || errorMessage.toLowerCase().includes('setting')) {
-      return chrome.i18n.getMessage('errorSettingsNeeded');
+      return contextValid ? (chrome.i18n.getMessage('errorSettingsNeeded') || '请先设置') : '请先设置';
     } else if (errorMessage.includes('网络') || errorMessage.toLowerCase().includes('network')) {
-      return chrome.i18n.getMessage('errorNetwork');
+      return contextValid ? (chrome.i18n.getMessage('errorNetwork') || '网络错误') : '网络错误';
     } else if (errorMessage.includes('下载') || errorMessage.toLowerCase().includes('download')) {
-      return chrome.i18n.getMessage('errorDownloadFailed');
+      return contextValid ? (chrome.i18n.getMessage('errorDownloadFailed') || '下载失败') : '下载失败';
     } else if (errorMessage.includes('数据') || errorMessage.includes('提取') || errorMessage.toLowerCase().includes('extract')) {
-      return chrome.i18n.getMessage('errorExtractionFailed');
+      return contextValid ? (chrome.i18n.getMessage('errorExtractionFailed') || '提取失败') : '提取失败';
     } else {
-      return chrome.i18n.getMessage('errorCollectionFailed');
+      return contextValid ? (chrome.i18n.getMessage('errorCollectionFailed') || '收藏失败') : '收藏失败';
     }
   }
 
@@ -278,13 +281,25 @@ class TwitterCollector {
    */
   private async notifyBackgroundLoaded(): Promise<void> {
     try {
+      // Check context before attempting to send message
+      if (!checkExtensionContext()) {
+        log('warn', 'TwitterCollector', 'Extension context invalidated, skipping background notification');
+        return;
+      }
+
       await sendChromeMessage({
         type: MessageType.CONTENT_LOADED,
         timestamp: new Date().toISOString()
       });
       log('info', 'TwitterCollector', 'Background notified of content script load');
     } catch (error) {
-      log('warn', 'TwitterCollector', 'Failed to notify background', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Extension context invalidated') || errorMessage.includes('context invalidated')) {
+        log('warn', 'TwitterCollector', 'Extension context invalidated during background notification');
+        // Don't show user error for this, it's expected during development
+      } else {
+        log('warn', 'TwitterCollector', 'Failed to notify background', error);
+      }
     }
   }
 

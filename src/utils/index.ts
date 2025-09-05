@@ -58,6 +58,33 @@ export function getFileExtension(url: string): string {
 }
 
 /**
+ * Normalize file path by removing duplicate slashes and trailing slashes
+ */
+export function normalizePath(path: string): string {
+  if (!path) return '';
+  
+  // Replace multiple slashes with single slash
+  let normalized = path.replace(/\/+/g, '/');
+  
+  // Remove trailing slash unless it's the root
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  
+  return normalized;
+}
+
+/**
+ * Join paths safely with proper slash handling
+ */
+export function joinPath(...segments: string[]): string {
+  const validSegments = segments.filter(s => s && typeof s === 'string');
+  if (validSegments.length === 0) return '';
+  
+  return normalizePath(validSegments.join('/'));
+}
+
+/**
  * Parse file path information
  */
 export function parseFilePath(fullPath: string): FilePathInfo {
@@ -173,12 +200,17 @@ export function formatTimestamp(timestamp: string): string {
 // ===== Chrome Extension Utilities =====
 
 /**
- * Check if Chrome extension APIs are available
+ * Check if Chrome extension APIs are available and context is valid
  */
 export function checkExtensionContext(): boolean {
-  return typeof chrome !== 'undefined' && 
-         !!chrome.runtime && 
-         !!chrome.runtime.sendMessage;
+  try {
+    return typeof chrome !== 'undefined' && 
+           !!chrome.runtime && 
+           !!chrome.runtime.sendMessage &&
+           !!chrome.runtime.id; // This will be undefined if context is invalidated
+  } catch (error) {
+    return false;
+  }
 }
 
 /**
@@ -222,25 +254,37 @@ export function setChromeStorage(items: Record<string, any>): Promise<void> {
 }
 
 /**
- * Safe Chrome runtime message sending
+ * Safe Chrome runtime message sending with context validation
  */
 export function sendChromeMessage<T>(message: any): Promise<T> {
   return new Promise((resolve, reject) => {
-    if (!chrome.runtime || !chrome.runtime.sendMessage) {
-      reject(new Error('Chrome runtime API not available'));
+    // Check context validity first
+    if (!checkExtensionContext()) {
+      reject(new Error('Extension context invalidated'));
       return;
     }
     
     try {
       chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
+          const error = chrome.runtime.lastError.message || 'Unknown extension error';
+          if (error.includes('context invalidated') || error.includes('Extension context')) {
+            reject(new Error('Extension context invalidated'));
+          } else {
+            reject(new Error(error));
+          }
         } else {
           resolve(response as T);
         }
       });
     } catch (error) {
-      reject(error);
+      // Handle cases where chrome.runtime.sendMessage itself throws
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('context invalidated') || errorMessage.includes('Extension context')) {
+        reject(new Error('Extension context invalidated'));
+      } else {
+        reject(error);
+      }
     }
   });
 }
@@ -321,14 +365,36 @@ export function createError(
 }
 
 /**
+ * Safe chrome.i18n.getMessage with fallback
+ */
+function safeGetMessage(key: string, fallback: string): string {
+  try {
+    if (checkExtensionContext() && chrome.i18n && chrome.i18n.getMessage) {
+      return chrome.i18n.getMessage(key) || fallback;
+    }
+  } catch (error) {
+    // Context invalidated or API not available
+  }
+  return fallback;
+}
+
+/**
  * Convert error to user-friendly message
  */
 export function getErrorMessage(error: ExtensionErrorInfo | Error | string): string {
   if (typeof error === 'string') {
+    // Check for context invalidation
+    if (error.includes('Extension context invalidated') || error.includes('context invalidated')) {
+      return safeGetMessage('errorContextInvalidated', '扩展已重新加载，请刷新页面后重试');
+    }
     return error;
   }
   
   if (error instanceof Error) {
+    // Check for context invalidation in error message
+    if (error.message.includes('Extension context invalidated') || error.message.includes('context invalidated')) {
+      return safeGetMessage('errorContextInvalidated', '扩展已重新加载，请刷新页面后重试');
+    }
     return error.message;
   }
   
@@ -336,21 +402,21 @@ export function getErrorMessage(error: ExtensionErrorInfo | Error | string): str
   const errorInfo = error as ExtensionErrorInfo;
   switch (errorInfo.type) {
     case ExtensionError.SETTINGS_NOT_FOUND:
-      return '请先设置保存路径：点击插件图标进行设置';
+      return safeGetMessage('errorSettingsNotFound', '请先设置保存路径：点击插件图标进行设置');
     case ExtensionError.INVALID_TWEET_DATA:
-      return '推文数据无效，请刷新页面后重试';
+      return safeGetMessage('errorInvalidTweetData', '推文数据无效，请刷新页面后重试');
     case ExtensionError.DOWNLOAD_FAILED:
-      return '下载失败，请检查网络连接';
+      return safeGetMessage('errorDownloadFailed', '下载失败，请检查网络连接');
     case ExtensionError.STORAGE_ERROR:
-      return '存储错误，请检查浏览器设置';
+      return safeGetMessage('errorStorageError', '存储错误，请检查浏览器设置');
     case ExtensionError.NETWORK_ERROR:
-      return '网络错误，请检查网络连接';
+      return safeGetMessage('errorNetworkError', '网络错误，请检查网络连接');
     case ExtensionError.PERMISSION_DENIED:
-      return '权限不足，请检查扩展权限设置';
+      return safeGetMessage('errorPermissionDenied', '权限不足，请检查扩展权限设置');
     case ExtensionError.CONTEXT_INVALIDATED:
-      return '扩展上下文已失效，请刷新页面';
+      return safeGetMessage('errorContextInvalidated', '扩展已重新加载，请刷新页面后重试');
     default:
-      return errorInfo.message || '未知错误';
+      return errorInfo.message || safeGetMessage('errorUnknown', '未知错误');
   }
 }
 
@@ -363,15 +429,31 @@ export function log(level: 'info' | 'warn' | 'error', context: string, message: 
   const timestamp = new Date().toISOString();
   const prefix = `[GglKnow][${timestamp}][${context}]`;
   
+  // Format data for proper logging
+  let formattedData = '';
+  if (data !== undefined && data !== null) {
+    if (typeof data === 'object') {
+      try {
+        formattedData = JSON.stringify(data);
+      } catch {
+        formattedData = String(data);
+      }
+    } else {
+      formattedData = String(data);
+    }
+  }
+  
+  const logMessage = formattedData ? `${prefix} ${message} ${formattedData}` : `${prefix} ${message}`;
+  
   switch (level) {
     case 'info':
-      console.log(`${prefix} ${message}`, data || '');
+      console.log(logMessage);
       break;
     case 'warn':
-      console.warn(`${prefix} ${message}`, data || '');
+      console.warn(logMessage);
       break;
     case 'error':
-      console.error(`${prefix} ${message}`, data || '');
+      console.error(logMessage);
       break;
   }
 }

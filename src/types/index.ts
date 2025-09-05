@@ -69,6 +69,8 @@ export interface TweetData {
   stats: TweetStats;
   /** Inline media items that appear within the text content */
   inlineMedia?: InlineMediaItem[];
+  /** Preferred media positioning for HTML generation */
+  mediaPosition?: 'top' | 'bottom';
 }
 
 /**

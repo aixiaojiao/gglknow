@@ -297,6 +297,18 @@ function createTweetHTMLBlock(
 
     const remainingMediaCount = imagePaths.length + videoPaths.length;
     const mediaGridClass = getMediaGridClass(remainingMediaCount);
+    
+    // Generate media HTML
+    const mediaHTML = remainingMediaCount > 0 ? `
+            <div class="tweet-media">
+                <div class="media-grid ${mediaGridClass}">
+                    ${imagePaths.map(p => `<img src="${p}" loading="lazy">`).join('')}
+                    ${videoPaths.map(p => `<video src="${p}" controls muted loop playsinline></video>`).join('')}
+                </div>
+            </div>` : '';
+    
+    // Determine media position (default to top for better visual layout)
+    const showMediaOnTop = tweetData.mediaPosition === 'top' || !tweetData.mediaPosition;
 
     return `
     <div class="tweet-card">
@@ -308,15 +320,9 @@ function createTweetHTMLBlock(
                     <p>@${tweetData.userHandle}</p>
                 </div>
             </div>
+            ${showMediaOnTop ? mediaHTML : ''}
             <div class="tweet-text">${processedText}</div>
-            ${remainingMediaCount > 0 ? `
-            <div class="tweet-media">
-                <div class="media-grid ${mediaGridClass}">
-                    ${imagePaths.map(p => `<img src="${p}" loading="lazy">`).join('')}
-                    ${videoPaths.map(p => `<video src="${p}" controls muted loop playsinline></video>`).join('')}
-                </div>
-            </div>
-            ` : ''}
+            ${!showMediaOnTop ? mediaHTML : ''}
             <div class="tweet-meta">
                 <span>${formatTimestamp(tweetData.tweetTime || tweetData.timestamp)}</span>
                 <a href="${tweetData.tweetUrl}" target="_blank" class="view-original-btn">查看原文</a>

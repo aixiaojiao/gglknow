@@ -14,7 +14,9 @@ export default defineConfig({
     typescript({
       tsconfig: './tsconfig.json',
       declaration: false,
-      declarationMap: false
+      declarationMap: false,
+      noEmit: false,
+      allowImportingTsExtensions: false
     })
   ]
 }); 

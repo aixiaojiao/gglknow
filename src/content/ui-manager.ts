@@ -430,17 +430,37 @@ export function isElementVisible(element: Element): boolean {
 export function observeNewTweets(
   onCollect: (tweetElement: Element, buttonElement: Element) => void
 ): MutationObserver {
+  let debounceTimer: number | null = null;
+  
   const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'childList') {
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node as Element;
-            addCollectionButtons(element, onCollect);
+    // Debounce to avoid excessive processing
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
+    debounceTimer = window.setTimeout(() => {
+      let hasRelevantChanges = false;
+      
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              // Only process if it contains tweet elements or is a tweet itself
+              if (element.matches('article[data-testid="tweet"]') || 
+                  element.querySelector('article[data-testid="tweet"]')) {
+                hasRelevantChanges = true;
+                addCollectionButtons(element, onCollect);
+              }
+            }
           }
         }
       }
-    }
+      
+      if (hasRelevantChanges) {
+        log('info', 'UIManager', 'Processing new tweets');
+      }
+    }, 100); // 100ms debounce
   });
 
   observer.observe(document.body, {
@@ -448,7 +468,7 @@ export function observeNewTweets(
     subtree: true
   });
 
-  log('info', 'UIManager', 'DOM observer started');
+  log('info', 'UIManager', 'DOM observer started with debouncing');
   return observer;
 }
 
