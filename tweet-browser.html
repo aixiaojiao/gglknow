@@ -709,6 +709,51 @@
             opacity: 0.8;
         }
 
+        .modal-tags-section, .modal-collections-section {
+            margin: 16px 0;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modal-tweet-collections {
+            min-height: 24px;
+        }
+
+        .collection-indicator {
+            display: inline-block;
+            padding: 6px 12px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            margin: 2px;
+            position: relative;
+        }
+
+        .collection-indicator .remove-collection {
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .collection-indicator .remove-collection:hover {
+            opacity: 1;
+        }
+
         .collections-panel {
             position: fixed;
             top: 0;
@@ -1038,8 +1083,19 @@
                 <div id="modalTweetUser" class="modal-tweet-user"></div>
                 <div id="modalTweetText" class="modal-tweet-text"></div>
                 <div id="modalTweetMedia" class="modal-tweet-media"></div>
-                <div id="modalTweetTags" class="modal-tweet-tags"></div>
-                <input type="text" id="tagInput" class="tag-input" placeholder="Add tags (press Enter)..." />
+                
+                <!-- Tags Section -->
+                <div class="modal-tags-section">
+                    <div class="section-title">🏷️ Tags</div>
+                    <div id="modalTweetTags" class="modal-tweet-tags"></div>
+                    <input type="text" id="tagInput" class="tag-input" placeholder="Add tags (press Enter)..." />
+                </div>
+                
+                <!-- Collections Section -->
+                <div class="modal-collections-section">
+                    <div class="section-title">📁 Collections</div>
+                    <div id="modalTweetCollections" class="modal-tweet-collections"></div>
+                </div>
             </div>
             <div class="modal-tweet-stats">
                 <div><span id="modalReplies"></span> Replies</div>
@@ -1085,6 +1141,5 @@
     
     <script src="tweet-metadata-manager.js"></script>
     <script src="tweet-browser.js"></script>
-    <script src="utils/lang-setter.js" defer></script>
 </body>
 </html>

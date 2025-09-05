@@ -87,7 +87,7 @@ class TweetMetadataManager {
         
         if (!cleanTag) return;
 
-        // Initialize tweet metadata if not exists
+        // Initialize tweet metadata if not exists, preserving existing data
         if (!this.metadata.tweets[tweetId]) {
             this.metadata.tweets[tweetId] = {
                 tags: [],
@@ -96,6 +96,11 @@ class TweetMetadataManager {
                 favorite: false,
                 created: new Date().toISOString()
             };
+        }
+        
+        // Ensure tags array exists
+        if (!this.metadata.tweets[tweetId].tags) {
+            this.metadata.tweets[tweetId].tags = [];
         }
 
         // Add tag if not already exists
@@ -183,6 +188,30 @@ class TweetMetadataManager {
 
         this.saveMetadata();
         return tweetId;
+    }
+
+    /**
+     * Remove tweet from collection
+     */
+    removeFromCollection(tweetData) {
+        const tweetId = this.generateTweetId(tweetData);
+        
+        if (this.metadata.tweets[tweetId] && this.metadata.tweets[tweetId].collection) {
+            const collectionId = this.metadata.tweets[tweetId].collection;
+            
+            // Remove from collection's tweets array
+            if (this.metadata.collections[collectionId]) {
+                const index = this.metadata.collections[collectionId].tweets.indexOf(tweetId);
+                if (index > -1) {
+                    this.metadata.collections[collectionId].tweets.splice(index, 1);
+                }
+            }
+            
+            // Clear collection from tweet metadata
+            this.metadata.tweets[tweetId].collection = '';
+            
+            this.saveMetadata();
+        }
     }
 
     /**
@@ -344,6 +373,17 @@ class TweetMetadataManager {
             }
         });
 
+        // Collection removal
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-collection')) {
+                if (window.currentTweetData) {
+                    this.removeFromCollection(window.currentTweetData);
+                    this.renderTweetCollections(window.currentTweetData);
+                    this.renderCollectionsList();
+                }
+            }
+        });
+
         // Export metadata
         document.addEventListener('click', (e) => {
             if (e.target.id === 'exportMetadata') {
@@ -394,19 +434,28 @@ class TweetMetadataManager {
      * Render collection indicator for a tweet
      */
     renderTweetCollections(tweetData) {
+        const container = document.getElementById('modalTweetCollections');
+        if (!container) return;
+
         const metadata = this.getTweetMetadata(tweetData);
         const collection = metadata.collection;
         
+        container.innerHTML = '';
+        
         if (collection && this.metadata.collections[collection]) {
             const collectionName = this.metadata.collections[collection].name;
-            const indicator = document.createElement('div');
-            indicator.className = 'collection-indicator';
-            indicator.innerHTML = `📁 ${collectionName}`;
-            
-            const container = document.getElementById('modalTweetTags');
-            if (container) {
-                container.appendChild(indicator);
-            }
+            container.innerHTML = `
+                <div class="collection-indicator">
+                    ${collectionName}
+                    <span class="remove-collection" data-collection="${collection}">×</span>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div style="color: var(--text-secondary); font-style: italic;">
+                    No collection assigned
+                </div>
+            `;
         }
     }
 

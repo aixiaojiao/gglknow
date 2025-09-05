@@ -8,7 +8,9 @@ class TweetBrowser {
             searchQuery: '',
             author: 'all-authors',
             content: 'all-content', // 'all-content', 'images'
-            time: 'all-time'      // 'all-time', 'today', 'week', 'month'
+            time: 'all-time',      // 'all-time', 'today', 'week', 'month'
+            tag: 'all-tags',       // 'all-tags' or specific tag
+            collection: 'all-collections' // 'all-collections' or specific collection
         };
         this.uiLocale = 'default';
         this.init();
@@ -97,6 +99,31 @@ class TweetBrowser {
                 e.target.classList.add('active');
                 this.applyFilters();
             }
+        });
+
+        // Tag filter
+        document.getElementById('tagFilter').addEventListener('change', (e) => {
+            this.filters.tag = e.target.value;
+            this.applyFilters();
+        });
+
+        // Collection filter
+        document.getElementById('collectionFilter').addEventListener('change', (e) => {
+            this.filters.collection = e.target.value;
+            this.applyFilters();
+        });
+
+        // Export/Import metadata
+        document.getElementById('exportMetadata').addEventListener('click', () => {
+            this.exportMetadata();
+        });
+
+        document.getElementById('importMetadata').addEventListener('click', () => {
+            document.getElementById('importFile').click();
+        });
+
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            this.importMetadata(e.target.files[0]);
         });
     }
 
@@ -251,7 +278,22 @@ class TweetBrowser {
                 const userNameEl = card.querySelector('.user-details h2');
                 const userHandleEl = card.querySelector('.user-details p');
                 const tweetTextEl = card.querySelector('.tweet-text');
-                const imageEls = Array.from(card.querySelectorAll('.media-item img, .media-item video'));
+                // 尝试多种图片选择器，但排除头像
+                let imageEls = Array.from(card.querySelectorAll('.media-item img, .media-item video'));
+                if (imageEls.length === 0) {
+                    // 尝试其他可能的选择器，但排除头像和用户相关图片
+                    imageEls = Array.from(card.querySelectorAll('img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".gif"], img[src*=".webp"], video'))
+                        .filter(img => {
+                            const src = img.getAttribute('src') || '';
+                            const className = img.className || '';
+                            // 排除头像相关的图片
+                            return !className.includes('avatar') && 
+                                   !src.includes('avatar') && 
+                                   !img.closest('.user-details') &&
+                                   !img.closest('.avatar');
+                        });
+                }
+                console.log(`Found ${imageEls.length} media elements in thread card`);
                 const tweetUrlEl = card.querySelector('.view-original-btn');
                 const avatarImgEl = card.querySelector('.avatar');
                 
@@ -314,7 +356,25 @@ class TweetBrowser {
             const userNameEl = doc.querySelector('.user-details h2');
             const userHandleEl = doc.querySelector('.user-details p');
             const tweetTextEl = doc.querySelector('.tweet-text');
-            const imageEls = Array.from(doc.querySelectorAll('.media-item img, .media-item video'));
+            // 尝试多种图片选择器，但排除头像
+            let imageEls = Array.from(doc.querySelectorAll('.media-item img, .media-item video'));
+            if (imageEls.length === 0) {
+                // 尝试其他可能的选择器，但排除头像和用户相关图片
+                imageEls = Array.from(doc.querySelectorAll('img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".gif"], img[src*=".webp"], video'))
+                    .filter(img => {
+                        const src = img.getAttribute('src') || '';
+                        const className = img.className || '';
+                        // 排除头像相关的图片
+                        return !className.includes('avatar') && 
+                               !src.includes('avatar') && 
+                               !img.closest('.user-details') &&
+                               !img.closest('.avatar');
+                    });
+            }
+            console.log(`Found ${imageEls.length} media elements in single tweet`);
+            if (imageEls.length > 0) {
+                console.log('Image sources:', imageEls.map(img => img.getAttribute('src')));
+            }
             const tweetUrlEl = doc.querySelector('.view-original-btn');
             const avatarImgEl = doc.querySelector('.avatar');
 
@@ -360,11 +420,47 @@ class TweetBrowser {
         resolvedTweet.displayImageUrls = [];
 
         const findFile = (path) => {
-            // 尝试直接匹配和移除开头的项目文件夹名称后匹配
+            if (!path) return null;
+            
+            // 规范化路径，统一使用正斜杠
             const normalizedPath = path.replace(/\\/g, '/');
-            const pathParts = normalizedPath.split('/');
-            const key = pathParts.slice(1).join('/'); // 移除根文件夹
-            return this.fileMap.get(normalizedPath) || this.fileMap.get(key);
+            
+            // 尝试多种路径匹配策略
+            const attempts = [
+                normalizedPath,                                    // 原始路径
+                normalizedPath.replace(/^\.\//, ''),              // 移除 ./
+                normalizedPath.split('/').slice(1).join('/'),     // 移除第一个目录
+                normalizedPath.split('/').slice(2).join('/'),     // 移除前两个目录
+                normalizedPath.split('/').pop(),                  // 仅文件名
+            ];
+            
+            // 同时尝试不同的文件扩展名
+            const extensions = ['', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
+            
+            for (const attempt of attempts) {
+                if (!attempt) continue;
+                
+                // 尝试不同扩展名
+                for (const ext of extensions) {
+                    const testPath = attempt + ext;
+                    
+                    // 在 fileMap 中查找
+                    for (const [key, file] of this.fileMap.entries()) {
+                        const normalizedKey = key.replace(/\\/g, '/');
+                        
+                        // 精确匹配
+                        if (normalizedKey === testPath) return file;
+                        
+                        // 文件名匹配（忽略路径）
+                        if (normalizedKey.endsWith('/' + testPath) || normalizedKey === testPath) return file;
+                        
+                        // 路径结尾匹配
+                        if (testPath.length > 3 && normalizedKey.endsWith(testPath)) return file;
+                    }
+                }
+            }
+            
+            return null;
         };
         
         // 解析头像
@@ -385,6 +481,9 @@ class TweetBrowser {
                     const url = URL.createObjectURL(file);
                     resolvedTweet.displayImageUrls.push(url);
                     this.objectUrls.push(url);
+                } else {
+                    console.warn(`Image not found: ${imagePath}`);
+                    console.warn('Available files:', Array.from(this.fileMap.keys()).filter(k => /\.(jpg|jpeg|png|gif|webp)$/i.test(k)));
                 }
             }
         }
@@ -459,7 +558,39 @@ class TweetBrowser {
                 break;
         }
 
-        // Step 3: 更新过滤后的推文列表并渲染
+        // Tag filtering
+        if (this.filters.tag !== 'all-tags') {
+            result = result.filter(tweet => {
+                try {
+                    const metadata = this.getMetadataManager();
+                    if (!metadata || typeof metadata.getTweetMetadata !== 'function') return false;
+                    const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                    return tweetMetadata && tweetMetadata.tags && tweetMetadata.tags.includes(this.filters.tag);
+                } catch (error) {
+                    console.warn('Tag filtering error:', error);
+                    return false;
+                }
+            });
+        }
+
+        // Collection filtering
+        if (this.filters.collection !== 'all-collections') {
+            result = result.filter(tweet => {
+                try {
+                    const metadata = this.getMetadataManager();
+                    if (!metadata || typeof metadata.getTweetMetadata !== 'function') return false;
+                    const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                    return tweetMetadata && tweetMetadata.collection === this.filters.collection;
+                } catch (error) {
+                    console.warn('Collection filtering error:', error);
+                    return false;
+                }
+            });
+        }
+
+        // Step 3: 更新过滤器选项并渲染
+        this.updateTagFilter();
+        this.updateCollectionFilter();
         this.filteredTweets = result;
         this.renderTweets();
     }
@@ -628,13 +759,166 @@ class TweetBrowser {
         }
     }
 
+    getMetadataManager() {
+        if (!window.tweetMetadataManager) {
+            // Initialize if not exists
+            window.tweetMetadataManager = new TweetMetadataManager();
+        }
+        return window.tweetMetadataManager;
+    }
 
+    updateTagFilter() {
+        const tagFilter = document.getElementById('tagFilter');
+        if (!tagFilter) return;
+        
+        const selectedTag = tagFilter.value;
+        
+        // Collect all unique tags from tweets
+        const allTags = new Set();
+        
+        try {
+            const metadata = this.getMetadataManager();
+            if (metadata && typeof metadata.getTweetMetadata === 'function') {
+                this.tweets.forEach(tweet => {
+                    try {
+                        const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                        if (tweetMetadata && tweetMetadata.tags) {
+                            tweetMetadata.tags.forEach(tag => allTags.add(tag));
+                        }
+                    } catch (error) {
+                        console.warn('Error getting tweet metadata for tag filter:', error);
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Error updating tag filter:', error);
+        }
 
+        // Clear and repopulate tag filter
+        tagFilter.innerHTML = '<option value="all-tags">All Tags</option>';
+        
+        Array.from(allTags).sort().forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag;
+            option.textContent = tag;
+            tagFilter.appendChild(option);
+        });
 
+        // Restore selection
+        if (allTags.has(selectedTag)) {
+            tagFilter.value = selectedTag;
+        } else {
+            tagFilter.value = 'all-tags';
+            if (this.filters.tag !== 'all-tags') {
+                this.filters.tag = 'all-tags';
+            }
+        }
+    }
 
+    updateCollectionFilter() {
+        const collectionFilter = document.getElementById('collectionFilter');
+        if (!collectionFilter) return;
+        
+        const selectedCollection = collectionFilter.value;
+        
+        // Collect all unique collections from tweets
+        const allCollections = new Set();
+        
+        try {
+            const metadata = this.getMetadataManager();
+            if (metadata && typeof metadata.getTweetMetadata === 'function') {
+                this.tweets.forEach(tweet => {
+                    try {
+                        const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                        if (tweetMetadata && tweetMetadata.collection) {
+                            allCollections.add(tweetMetadata.collection);
+                        }
+                    } catch (error) {
+                        console.warn('Error getting tweet metadata for collection filter:', error);
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Error updating collection filter:', error);
+        }
 
+        // Clear and repopulate collection filter
+        collectionFilter.innerHTML = '<option value="all-collections">All Collections</option>';
+        
+        Array.from(allCollections).sort().forEach(collection => {
+            const option = document.createElement('option');
+            option.value = collection;
+            option.textContent = collection;
+            collectionFilter.appendChild(option);
+        });
 
+        // Restore selection
+        if (allCollections.has(selectedCollection)) {
+            collectionFilter.value = selectedCollection;
+        } else {
+            collectionFilter.value = 'all-collections';
+            if (this.filters.collection !== 'all-collections') {
+                this.filters.collection = 'all-collections';
+            }
+        }
+    }
 
+    exportMetadata() {
+        const metadata = this.getMetadataManager();
+        const data = {
+            metadata: metadata.getAllMetadata(),
+            exportDate: new Date().toISOString(),
+            version: '2.2.0'
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tweet-metadata-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        
+        URL.revokeObjectURL(url);
+        this.showNotification('Metadata exported successfully!');
+    }
+
+    importMetadata(file) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                if (data.metadata) {
+                    const metadata = this.getMetadataManager();
+                    
+                    // Import metadata
+                    Object.entries(data.metadata.tweets || {}).forEach(([tweetId, tweetData]) => {
+                        metadata.updateTweetMetadata(tweetId, tweetData);
+                    });
+                    
+                    // Save to localStorage
+                    metadata.saveToStorage();
+                    
+                    // Update filters to show new data
+                    this.applyFilters();
+                    
+                    this.showNotification('Metadata imported successfully!');
+                } else {
+                    throw new Error('Invalid metadata format');
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                this.showNotification('Failed to import metadata: Invalid file format');
+            }
+        };
+        
+        reader.readAsText(file);
+        // Clear the file input so the same file can be imported again
+        document.getElementById('importFile').value = '';
+    }
 
     // 更新重新加载图片按钮的可见性
     updateReloadMediaButtonVisibility() {
@@ -782,10 +1066,24 @@ function showTweetDetail(index) {
     modalTweetText.innerHTML = tweet.text || '';
     
     // Populate media
+    console.log('Tweet displayImageUrls:', tweet.displayImageUrls);
+    console.log('Tweet media.images:', tweet.media?.images);
+    
     const imagesHTML = (tweet.displayImageUrls || [])
         .map(src => `<img src="${src}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
         .join('');
+    console.log('Generated imagesHTML:', imagesHTML);
     modalTweetMedia.innerHTML = imagesHTML;
+    
+    // If no displayImageUrls but original images exist, show placeholder
+    if ((!tweet.displayImageUrls || tweet.displayImageUrls.length === 0) && 
+        tweet.media?.images && tweet.media.images.length > 0) {
+        modalTweetMedia.innerHTML = `
+            <div style="padding: 10px; border: 2px dashed var(--border-color); border-radius: 8px; text-align: center; margin-top: 10px;">
+                <span style="color: var(--text-secondary);">📷 ${tweet.media.images.length} image(s) - Please reload images by selecting the tweet folder</span>
+            </div>
+        `;
+    }
     
     // Set up tweet link
     if (tweet.tweetUrl) {
