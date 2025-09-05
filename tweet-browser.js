@@ -178,11 +178,13 @@ class TweetBrowser {
             this.applyFilters();
             this.updateReloadMediaButtonVisibility();
 
-            this.showNotification(chrome.i18n.getMessage('notifyLoadedTweets', [loadedCount.toString()]));
+            const notifyText = this.getI18nMessage('notifyLoadedTweets') || `Loaded ${loadedCount} tweets`;
+            this.showNotification(notifyText.replace('%s', loadedCount.toString()));
 
         } catch (fatalError) {
             console.error('加载文件时发生严重错误:', fatalError);
-            this.showNotification(chrome.i18n.getMessage('notifyLoadError'));
+            const errorText = this.getI18nMessage('notifyLoadError') || 'Failed to load tweets';
+            this.showNotification(errorText);
         }
     }
 
@@ -467,10 +469,12 @@ class TweetBrowser {
         container.innerHTML = ''; // 清空容器
 
         if (this.filteredTweets.length === 0) {
+            const emptyTitle = this.getI18nMessage('emptyStateNoMatchesTitle') || 'No matches found';
+            const emptyDesc = this.getI18nMessage('emptyStateNoMatchesDescription') || 'Try adjusting your filters';
             container.innerHTML = `
                 <div class="empty-state">
-                    <h3>${chrome.i18n.getMessage('emptyStateNoMatchesTitle')}</h3>
-                    <p>${chrome.i18n.getMessage('emptyStateNoMatchesDescription')}</p>
+                    <h3>${emptyTitle}</h3>
+                    <p>${emptyDesc}</p>
                 </div>
             `;
             return;
@@ -485,10 +489,10 @@ class TweetBrowser {
             card.dataset.tweetIndex = index;
             card.dataset.tweetId = tweet.id;
 
-            const userName = tweet.userName || chrome.i18n.getMessage('unknownUser');
+            const userName = tweet.userName || this.getI18nMessage('unknownUser') || 'Unknown User';
             const userHandle = tweet.userHandle || 'unknown';
             const text = tweet.text || '';
-            const timestamp = tweet.timestamp ? new Date(tweet.timestamp).toLocaleDateString(this.uiLocale) : chrome.i18n.getMessage('unknownDate');
+            const timestamp = tweet.timestamp ? new Date(tweet.timestamp).toLocaleDateString(this.uiLocale) : (this.getI18nMessage('unknownDate') || 'Unknown Date');
             const likes = tweet.stats?.likes || '0';
             const retweets = tweet.stats?.retweets || '0';
 
@@ -534,7 +538,8 @@ class TweetBrowser {
 
     showLoading() {
         const container = document.getElementById('tweetsContainer');
-        container.innerHTML = `<div class="loading">${chrome.i18n.getMessage('loadingTweets')}</div>`;
+        const loadingText = this.getI18nMessage('loadingTweets') || 'Loading tweets...';
+        container.innerHTML = `<div class="loading">${loadingText}</div>`;
     }
 
     showEmptyState() {
@@ -569,60 +574,20 @@ class TweetBrowser {
         this.updateStats();
         this.applyFilters();
         this.updateReloadMediaButtonVisibility();
-        this.showNotification(chrome.i18n.getMessage('notifyTweetDeleted'));
+        const deleteText = this.getI18nMessage('notifyTweetDeleted') || 'Tweet deleted';
+        this.showNotification(deleteText);
     }
 
 
 
-    showTweetDetail(index) {
-        const tweet = this.filteredTweets[index];
-        if (!tweet) return;
-
-        const modal = document.getElementById('tweetModal');
-        const modalContent = document.getElementById('modalContent');
-
-        const imagesHTML = (tweet.displayImageUrls || [])
-            .map(src => `<img src="${src}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
-            .join('');
-
-        const avatarHtml = tweet.displayAvatarUrl
-            ? `<img src="${tweet.displayAvatarUrl}" alt="${tweet.userName}" class="user-avatar-img">`
-            : `<div class="user-avatar-placeholder">${(tweet.userName || 'U').charAt(0).toUpperCase()}</div>`;
-
-        modalContent.innerHTML = `
-            <div class="tweet-card" style="box-shadow: none; border: none;">
-                <div class="tweet-user">
-                    ${avatarHtml}
-                    <div class="user-info">
-                        <h4>${tweet.userName || chrome.i18n.getMessage('unknownUser')}</h4>
-                        <span class="user-handle">@${tweet.userHandle || 'unknown'}</span>
-                    </div>
-                </div>
-                <p class="tweet-text-full">${tweet.text || ''}</p>
-                <div class="media-container">${imagesHTML}</div>
-                <div class="tweet-stats">
-                    <span>${chrome.i18n.getMessage('likesStat', [tweet.stats?.likes || '0'])}</span>
-                    <span>${chrome.i18n.getMessage('retweetsStat', [tweet.stats?.retweets || '0'])}</span>
-                    <span class="tweet-timestamp">${tweet.timestamp ? new Date(tweet.timestamp).toLocaleString(this.uiLocale) : ''}</span>
-                </div>
-            </div>
-        `;
-
-        modal.style.display = 'block';
-
-        document.getElementById('modalRetweets').textContent = tweet.stats?.retweets || '0';
-        document.getElementById('modalLikes').textContent = tweet.stats?.likes || '0';
-
-        const tweetLink = document.getElementById('modalTweetLink');
-        if (tweet.tweetUrl) {
-            tweetLink.href = tweet.tweetUrl;
-            tweetLink.style.display = 'inline-block';
-        } else {
-            tweetLink.style.display = 'none';
+    getI18nMessage(key) {
+        try {
+            return chrome && chrome.i18n ? chrome.i18n.getMessage(key) : null;
+        } catch (error) {
+            return null;
         }
-        
-        document.getElementById('tweetDetailModal').style.display = 'block';
     }
+
 
     updateAuthorFilter() {
         const authorFilter = document.getElementById('authorFilter');
@@ -643,7 +608,8 @@ class TweetBrowser {
 
         // 3. 清空并重新填充下拉列表
         // Note: The text for 'all-authors' is set via localizePage now
-        authorFilter.innerHTML = `<option value="all-authors" data-i18n="allAuthorsOption">${chrome.i18n.getMessage('allAuthorsOption')}</option>`;
+        const allAuthorsText = this.getI18nMessage('allAuthorsOption') || 'All Authors';
+        authorFilter.innerHTML = `<option value="all-authors" data-i18n="allAuthorsOption">${allAuthorsText}</option>`;
         sortedAuthors.forEach(([handle, name]) => {
             const option = document.createElement('option');
             option.value = handle; // 值是唯一的账号名，用于筛选
@@ -741,116 +707,106 @@ class TweetBrowser {
 let browser;
 
 function showTweetDetail(index) {
-    const tweet = browser.filteredTweets[index];
-    const modal = document.getElementById('modal');
-    const modalContent = document.getElementById('modalContent');
+    console.log('Global showTweetDetail called with index:', index);
     
-    const avatarHtml = tweet.displayAvatarUrl
-        ? `<img src="${tweet.displayAvatarUrl}" alt="${tweet.userName}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px;">`
-        : `<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #1da1f2, #1991db); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; margin-right: 15px;">
-               ${(tweet.userName || 'U').charAt(0).toUpperCase()}
-           </div>`;
-
-    // 如果是推文串，显示特殊的布局
-    if (tweet.isThread && tweet.threadTweets) {
-        const threadContent = tweet.threadTweets.map((threadTweet, i) => `
-            <div style="border: 1px solid #e1e8ed; border-radius: 12px; padding: 20px; margin-bottom: 15px; background: ${i === 0 ? '#f8f9ff' : 'white'};">
-                <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                    <div style="width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, #1da1f2, #1991db); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; margin-right: 12px;">
-                        ${i + 1}
-                    </div>
-                    <div>
-                        <h4 style="margin: 0; font-size: 14px; color: #14171a;">${browser.escapeHtml(threadTweet.userName)}</h4>
-                        <p style="margin: 2px 0 0 0; color: #657786; font-size: 12px;">@${browser.escapeHtml(threadTweet.userHandle)}</p>
-                    </div>
-                </div>
-                
-                <div style="margin: 12px 0; font-size: 15px; line-height: 1.5; color: #14171a;">
-                    ${threadTweet.text || ''}
-                </div>
-                
-                ${(threadTweet.media?.images && threadTweet.media.images.length > 0) ? `
-                    <div style="margin: 12px 0;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
-                            ${threadTweet.media.images.map(img => {
-                                // 查找对应的显示URL
-                                const imgIndex = tweet.media?.images?.indexOf(img) || 0;
-                                const displayUrl = tweet.displayImageUrls?.[imgIndex] || img;
-                                return `<img src="${displayUrl}" style="width: 100%; border-radius: 6px;" alt="推文图片">`;
-                            }).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `).join('');
-
-        modalContent.innerHTML = `
-            <div style="padding: 30px;">
-                <div style="display: flex; align-items: center; margin-bottom: 25px;">
-                    ${avatarHtml}
-                    <div>
-                        <h3 style="margin: 0; color: #14171a;">${browser.escapeHtml(tweet.userName)}</h3>
-                        <div style="color: #657786;">@${browser.escapeHtml(tweet.userHandle)}</div>
-                        <span style="background: #1da1f2; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-top: 5px; display: inline-block;">🧵 推文串 (${tweet.threadTweets.length}条)</span>
-                    </div>
-                </div>
-                
-                <div style="margin: 20px 0; max-height: 60vh; overflow-y: auto;">
-                    ${threadContent}
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;">
-                    <span>💬 ${tweet.stats?.replies || '0'} 回复</span>
-                    <span>🔁 ${tweet.stats?.retweets || '0'} 转推</span>
-                    <span>❤️ ${tweet.stats?.likes || '0'} 点赞</span>
-                </div>
-                
-                <div style="margin-top: 15px; text-align: center; color: #657786; font-size: 12px;">
-                    收藏时间: ${new Date(tweet.timestamp).toLocaleString('zh-CN')}
-                    ${tweet.tweetUrl ? `<br><a href="${tweet.tweetUrl}" target="_blank" style="color: #1da1f2;">查看原推文</a>` : ''}
-                </div>
-            </div>
-        `;
-    } else {
-        // 显示单个推文
-        modalContent.innerHTML = `
-            <div style="padding: 30px;">
-                <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                    ${avatarHtml}
-                    <div>
-                        <h3 style="margin: 0; color: #14171a;">${browser.escapeHtml(tweet.userName)}</h3>
-                        <div style="color: #657786;">@${browser.escapeHtml(tweet.userHandle)}</div>
-                    </div>
-                </div>
-                
-                <div style="font-size: 18px; line-height: 1.6; color: #14171a; margin-bottom: 20px; white-space: pre-wrap;">
-                    ${tweet.text}
-                </div>
-                
-                ${(tweet.displayImageUrls && tweet.displayImageUrls.length > 0) ? `
-                    <div style="margin: 20px 0;">
-                        <h4 style="margin-bottom: 10px;">📷 图片</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                            ${tweet.displayImageUrls.map(img => `<img src="${img}" style="width: 100%; border-radius: 8px;" alt="推文图片">`).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div style="display: flex; justify-content: space-between; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;">
-                    <span>💬 ${tweet.stats?.replies || '0'} 回复</span>
-                    <span>🔁 ${tweet.stats?.retweets || '0'} 转推</span>
-                    <span>❤️ ${tweet.stats?.likes || '0'} 点赞</span>
-                </div>
-                
-                <div style="margin-top: 15px; text-align: center; color: #657786; font-size: 12px;">
-                    收藏时间: ${new Date(tweet.timestamp).toLocaleString('zh-CN')}
-                    ${tweet.tweetUrl ? `<br><a href="${tweet.tweetUrl}" target="_blank" style="color: #1da1f2;">查看原推文</a>` : ''}
-                </div>
-            </div>
-        `;
+    if (!browser) {
+        console.error('Browser instance not initialized');
+        return;
     }
     
+    if (!browser.filteredTweets) {
+        console.error('No filteredTweets array');
+        return;
+    }
+    
+    if (browser.filteredTweets.length === 0) {
+        console.error('No tweets loaded');
+        return;
+    }
+    
+    const tweet = browser.filteredTweets[index];
+    if (!tweet) {
+        console.error('No tweet found at index:', index, 'Total tweets:', browser.filteredTweets.length);
+        return;
+    }
+    
+    console.log('Tweet data:', tweet);
+    
+    const modal = document.getElementById('modal');
+    if (!modal) {
+        console.error('Modal element not found');
+        return;
+    }
+    
+    // Get the individual modal elements
+    const modalTweetUser = document.getElementById('modalTweetUser');
+    const modalTweetText = document.getElementById('modalTweetText');
+    const modalTweetMedia = document.getElementById('modalTweetMedia');
+    const modalTweetLink = document.getElementById('modalTweetLink');
+    
+    console.log('Modal elements found in showTweetDetail:', {
+        modalTweetUser: !!modalTweetUser,
+        modalTweetText: !!modalTweetText,
+        modalTweetMedia: !!modalTweetMedia,
+        modalTweetLink: !!modalTweetLink
+    });
+    
+    if (!modalTweetUser) {
+        console.error('modalTweetUser element not found');
+        return;
+    }
+    if (!modalTweetText) {
+        console.error('modalTweetText element not found');
+        return;
+    }
+    if (!modalTweetMedia) {
+        console.error('modalTweetMedia element not found');
+        return;
+    }
+    
+    // Create avatar HTML
+    const avatarHtml = tweet.displayAvatarUrl
+        ? `<img src="${tweet.displayAvatarUrl}" alt="${tweet.userName}" class="user-avatar-img">`
+        : `<div class="user-avatar-placeholder">${(tweet.userName || 'U').charAt(0).toUpperCase()}</div>`;
+    
+    // Populate user info
+    modalTweetUser.innerHTML = `
+        ${avatarHtml}
+        <div class="user-info">
+            <h4>${tweet.userName || 'Unknown User'}</h4>
+            <span class="user-handle">@${tweet.userHandle || 'unknown'}</span>
+        </div>
+    `;
+    
+    // Populate text
+    modalTweetText.innerHTML = tweet.text || '';
+    
+    // Populate media
+    const imagesHTML = (tweet.displayImageUrls || [])
+        .map(src => `<img src="${src}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
+        .join('');
+    modalTweetMedia.innerHTML = imagesHTML;
+    
+    // Set up tweet link
+    if (tweet.tweetUrl) {
+        modalTweetLink.href = tweet.tweetUrl;
+        modalTweetLink.style.display = 'inline-block';
+    } else {
+        modalTweetLink.style.display = 'none';
+    }
+    
+    // Store current tweet data for metadata manager
+    window.currentTweetData = tweet;
+    
+    // Initialize metadata for this tweet if manager is available
+    if (window.metadataManager) {
+        window.metadataManager.renderTweetTags(tweet);
+        window.metadataManager.renderTweetCollections(tweet);
+    }
+    
+    // Show the modal
     modal.style.display = 'block';
+    console.log('Modal opened successfully');
 }
 
 function closeModal() {
@@ -860,6 +816,16 @@ function closeModal() {
 // 绑定模态框事件监听器
 document.addEventListener('DOMContentLoaded', () => {
     browser = new TweetBrowser();
+    
+    // Debug: Check if modal elements exist
+    console.log('Modal elements check:', {
+        modal: !!document.getElementById('modal'),
+        modalTweetUser: !!document.getElementById('modalTweetUser'),
+        modalTweetText: !!document.getElementById('modalTweetText'),
+        modalTweetMedia: !!document.getElementById('modalTweetMedia'),
+        modalTweetLink: !!document.getElementById('modalTweetLink'),
+        modalCloseBtn: !!document.getElementById('modalCloseBtn')
+    });
     
     // 模态框关闭按钮
     document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
