@@ -482,9 +482,18 @@ class AITagEngine {
 
     extractDomain(url) {
         try {
-            return new URL(url).hostname;
-        } catch {
-            return null;
+            // More compatible way to extract domain
+            if (typeof URL !== 'undefined') {
+                return new URL(url).hostname;
+            } else {
+                // Fallback for older browsers
+                const match = url.match(/^https?:\/\/([^\/]+)/);
+                return match ? match[1] : null;
+            }
+        } catch (error) {
+            // Manual parsing fallback
+            const match = url.match(/^https?:\/\/([^\/]+)/);
+            return match ? match[1] : null;
         }
     }
 

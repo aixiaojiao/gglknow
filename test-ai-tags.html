@@ -138,14 +138,17 @@
 
         // Test function
         async function testTweet(tweetData) {
+            console.log('Testing tweet:', tweetData);
             const resultId = tweetData.userHandle + '-results';
             const resultDiv = document.getElementById(resultId);
             
             try {
+                console.log('Starting analysis...');
                 resultDiv.style.display = 'block';
                 resultDiv.innerHTML = '<em>Analyzing...</em>';
                 
                 const analysis = await aiEngine.analyzeTweet(tweetData);
+                console.log('Analysis result:', analysis);
                 
                 if (analysis.suggestions.length === 0) {
                     resultDiv.innerHTML = '<em>No suggestions found</em>';
@@ -191,11 +194,31 @@
             alert('Learning patterns reset successfully!');
         }
 
+        // Test AI Engine initialization
+        console.log('=== AI TAG ENGINE INITIALIZATION ===');
+        console.log('AI Engine created:', aiEngine);
+        console.log('Settings:', aiEngine.settings);
+        console.log('Rules count:', Object.keys(aiEngine.rules).length);
+
+        // Test a simple analysis
+        setTimeout(async () => {
+            try {
+                console.log('=== TESTING AI ANALYSIS ===');
+                const testResult = await aiEngine.analyzeTweet({
+                    tweetText: "Hello world JavaScript React",
+                    userName: "TestUser",
+                    userHandle: "testuser"
+                });
+                console.log('Test analysis result:', testResult);
+            } catch (error) {
+                console.error('Test analysis failed:', error);
+            }
+        }, 1000);
+
         // Initial stats display
         showStats();
 
         console.log('AI Tag Engine Test loaded successfully');
-        console.log('AI Engine:', aiEngine);
     </script>
 </body>
 </html>
