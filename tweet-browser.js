@@ -1,5 +1,6 @@
 class TweetBrowser {
     constructor() {
+        console.log('TweetBrowser constructor called');
         this.tweets = [];
         this.filteredTweets = [];
         this.fileMap = new Map();
@@ -59,7 +60,7 @@ class TweetBrowser {
     bindEvents() {
         const fileInput = document.getElementById('fileInput');
         
-        // 在文件选择前清空，确保选择相同文件也能触发change事件
+        // Clear before file selection to ensure same file can trigger change event
         fileInput.addEventListener('click', (e) => {
             e.target.value = null;
         });
@@ -68,7 +69,7 @@ class TweetBrowser {
             this.loadFiles(e.target.files);
         });
 
-        // 重新加载图片按钮事件
+        // Reload media button event
         document.getElementById('reloadMediaBtn').addEventListener('click', (e) => {
             this.triggerFileSelection();
         });
@@ -109,6 +110,7 @@ class TweetBrowser {
 
         // Collection filter
         document.getElementById('collectionFilter').addEventListener('change', (e) => {
+            console.log('Collection filter changed to:', e.target.value);
             this.filters.collection = e.target.value;
             this.applyFilters();
         });
@@ -134,42 +136,42 @@ class TweetBrowser {
 
         setTimeout(() => {
             notificationArea.style.opacity = '0';
-        }, 5000); // 5秒后自动消失
+        }, 5000); // Auto hide after 5 seconds
     }
 
     async loadFiles(files) {
         if (!files.length) return;
 
-        // 获取当前选择的文件夹名称
+        // Get current selected folder name
         const firstFile = files[0];
         const currentFolderName = firstFile.webkitRelativePath ? 
-            firstFile.webkitRelativePath.split('/')[0] : '选择的文件';
+            firstFile.webkitRelativePath.split('/')[0] : 'Selected files';
 
-        // 检查是否需要重新加载媒体文件
+        // Check if need to reload media files
         if (this.needsMediaReload && this.tweets.length > 0) {
             const isSameFolder = currentFolderName === this.lastFolderName;
             
             if (isSameFolder) {
-                // 相同文件夹，自动重新加载图片
+                // Same folder, auto reload images
                 await this.reloadMediaForTweets(files);
                 this.needsMediaReload = false;
                 return;
             } else {
-                // 不同文件夹，询问用户是否要替换数据
+                // Different folder, ask user if want to replace data
                 const shouldReplace = confirm(
-                    `检测到新的文件夹 "${currentFolderName}"，与之前的文件夹 "${this.lastFolderName}" 不同。\n\n` +
-                    `是否要替换现有数据？\n` +
-                    `- 点击"确定"：清除现有数据并加载新文件夹\n` +
-                    `- 点击"取消"：保持现有数据并为其加载图片`
+                    `Detected new folder "${currentFolderName}", different from previous folder "${this.lastFolderName}".\n\n` +
+                    `Do you want to replace existing data?\n` +
+                    `- Click "OK": Clear existing data and load new folder\n` +
+                    `- Click "Cancel": Keep existing data and load images for it`
                 );
                 
                 if (!shouldReplace) {
-                    // 用户选择保持现有数据，为现有数据加载图片
+                    // User chose to keep existing data, load images for existing data
                     await this.reloadMediaForTweets(files);
                     this.needsMediaReload = false;
                     return;
                 }
-                // 用户选择替换，继续执行下面的正常加载流程
+                // User chose to replace, continue normal loading process below
                 this.needsMediaReload = false;
             }
         }
@@ -195,7 +197,7 @@ class TweetBrowser {
                         loadedCount++;
                     }
                 } catch (error) {
-                    console.error(`处理文件 ${file.name} 失败:`, error);
+                    console.error(`Failed to process file ${file.name}:`, error);
                 }
             }
 
@@ -203,13 +205,21 @@ class TweetBrowser {
             
             this.updateStats();
             this.applyFilters();
+            
+            // Delayed filter update to ensure metadata manager is initialized
+            setTimeout(() => {
+                console.log('Manually updating filters after file load');
+                this.updateTagFilter();
+                this.updateCollectionFilter();
+            }, 100);
+            
             this.updateReloadMediaButtonVisibility();
 
             const notifyText = this.getI18nMessage('notifyLoadedTweets') || `Loaded ${loadedCount} tweets`;
             this.showNotification(notifyText.replace('%s', loadedCount.toString()));
 
         } catch (fatalError) {
-            console.error('加载文件时发生严重错误:', fatalError);
+            console.error('Fatal error occurred while loading files:', fatalError);
             const errorText = this.getI18nMessage('notifyLoadError') || 'Failed to load tweets';
             this.showNotification(errorText);
         }
@@ -236,7 +246,7 @@ class TweetBrowser {
         try {
             if (filename.endsWith('.json')) {
                 const data = JSON.parse(content);
-                // 确保时间戳存在且有效
+                // Ensure timestamp exists and is valid
                 if (!data.timestamp && data.tweetTime) {
                     data.timestamp = data.tweetTime;
                 }
@@ -245,7 +255,7 @@ class TweetBrowser {
                 return this.parseHTMLFile(content, filename);
             }
         } catch (error) {
-            console.error('解析文件失败:', filename, error);
+            console.error('Failed to parse file:', filename, error);
         }
         return null;
     }
@@ -254,39 +264,39 @@ class TweetBrowser {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // 检测是否是推文串（包含多个 tweet-card 块）
+        // Detect if this is a tweet thread (contains multiple tweet-card blocks)
         const tweetCards = Array.from(doc.querySelectorAll('.tweet-card'));
         const isThread = tweetCards.length > 1;
         
         const getRelativePath = (src, basePath) => {
             if (!src || !basePath) return '';
             
-            // 规范化路径，移除"./"
+            // Normalize path, remove "./"
             const cleanedSrc = src.startsWith('./') ? src.substring(2) : src;
             
-            // 获取HTML文件所在的目录
+            // Get HTML file directory
             const baseDir = basePath.includes('/') ? basePath.substring(0, basePath.lastIndexOf('/')) : '';
             
-            // 组合成完整路径
-            // 如果baseDir为空（HTML在根目录），则直接返回清理后的src
+            // Combine into full path
+            // If baseDir is empty (HTML in root directory), return cleaned src directly
             return baseDir ? `${baseDir}/${cleanedSrc}` : cleanedSrc;
         };
 
         if (isThread) {
-            // 处理推文串：解析所有推文并合并
+            // Handle tweet thread: parse all tweets and merge
             const threadTweets = tweetCards.map(card => {
                 const userNameEl = card.querySelector('.user-details h2');
                 const userHandleEl = card.querySelector('.user-details p');
                 const tweetTextEl = card.querySelector('.tweet-text');
-                // 尝试多种图片选择器，但排除头像
+                // Try multiple image selectors, but exclude avatars
                 let imageEls = Array.from(card.querySelectorAll('.media-item img, .media-item video'));
                 if (imageEls.length === 0) {
-                    // 尝试其他可能的选择器，但排除头像和用户相关图片
+                    // Try other possible selectors, but exclude avatars and user related images
                     imageEls = Array.from(card.querySelectorAll('img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".gif"], img[src*=".webp"], video'))
                         .filter(img => {
                             const src = img.getAttribute('src') || '';
                             const className = img.className || '';
-                            // 排除头像相关的图片
+                            // Exclude avatar related images
                             return !className.includes('avatar') && 
                                    !src.includes('avatar') && 
                                    !img.closest('.user-details') &&
@@ -297,12 +307,25 @@ class TweetBrowser {
                 const tweetUrlEl = card.querySelector('.view-original-btn');
                 const avatarImgEl = card.querySelector('.avatar');
                 
-                let timestamp = new Date().toISOString();
+                let timestamp = null;
                 const timeEl = card.querySelector('.meta-item span:last-child');
                 if (timeEl) {
                     const timeText = timeEl.textContent.trim();
+                    console.log('Found time element with text:', timeText);
                     const date = new Date(timeText);
-                    if (!isNaN(date)) timestamp = date.toISOString();
+                    if (!isNaN(date)) {
+                        timestamp = date.toISOString();
+                        console.log('Parsed timestamp:', timestamp);
+                    } else {
+                        console.log('Failed to parse time:', timeText);
+                    }
+                } else {
+                    console.log('No time element found with selector .meta-item span:last-child');
+                }
+                // Only use current time as fallback if no valid timestamp found
+                if (!timestamp) {
+                    timestamp = new Date().toISOString();
+                    console.log('Using fallback timestamp:', timestamp);
                 }
 
                 const getStat = (label) => {
@@ -330,7 +353,7 @@ class TweetBrowser {
                 };
             });
 
-            // 使用第一条推文的信息作为主要信息，但合并所有推文内容
+            // Use first tweet's info as main info, but merge all tweet content
             const mainTweet = threadTweets[0];
             const allImages = [];
             const allTexts = [];
@@ -352,19 +375,19 @@ class TweetBrowser {
                 url: ''
             };
         } else {
-            // 处理单个推文
+            // Handle single tweet
             const userNameEl = doc.querySelector('.user-details h2');
             const userHandleEl = doc.querySelector('.user-details p');
             const tweetTextEl = doc.querySelector('.tweet-text');
-            // 尝试多种图片选择器，但排除头像
+            // Try multiple image selectors, but exclude avatars
             let imageEls = Array.from(doc.querySelectorAll('.media-item img, .media-item video'));
             if (imageEls.length === 0) {
-                // 尝试其他可能的选择器，但排除头像和用户相关图片
+                // Try other possible selectors, but exclude avatars and user related images
                 imageEls = Array.from(doc.querySelectorAll('img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".gif"], img[src*=".webp"], video'))
                     .filter(img => {
                         const src = img.getAttribute('src') || '';
                         const className = img.className || '';
-                        // 排除头像相关的图片
+                        // Exclude avatar related images
                         return !className.includes('avatar') && 
                                !src.includes('avatar') && 
                                !img.closest('.user-details') &&
@@ -378,12 +401,25 @@ class TweetBrowser {
             const tweetUrlEl = doc.querySelector('.view-original-btn');
             const avatarImgEl = doc.querySelector('.avatar');
 
-            let timestamp = new Date().toISOString();
+            let timestamp = null;
             const timeEl = doc.querySelector('.meta-item span:last-child');
             if (timeEl) {
                 const timeText = timeEl.textContent.trim();
+                console.log('Found time element with text:', timeText);
                 const date = new Date(timeText);
-                if (!isNaN(date)) timestamp = date.toISOString();
+                if (!isNaN(date)) {
+                    timestamp = date.toISOString();
+                    console.log('Parsed timestamp:', timestamp);
+                } else {
+                    console.log('Failed to parse time:', timeText);
+                }
+            } else {
+                console.log('No time element found with selector .meta-item span:last-child');
+            }
+            // Only use current time as fallback if no valid timestamp found
+            if (!timestamp) {
+                timestamp = new Date().toISOString();
+                console.log('Using fallback timestamp:', timestamp);
             }
 
             const getStat = (label) => {
@@ -422,39 +458,39 @@ class TweetBrowser {
         const findFile = (path) => {
             if (!path) return null;
             
-            // 规范化路径，统一使用正斜杠
+            // Normalize path, use forward slashes consistently
             const normalizedPath = path.replace(/\\/g, '/');
             
-            // 尝试多种路径匹配策略
+            // Try multiple path matching strategies
             const attempts = [
-                normalizedPath,                                    // 原始路径
-                normalizedPath.replace(/^\.\//, ''),              // 移除 ./
-                normalizedPath.split('/').slice(1).join('/'),     // 移除第一个目录
-                normalizedPath.split('/').slice(2).join('/'),     // 移除前两个目录
-                normalizedPath.split('/').pop(),                  // 仅文件名
+                normalizedPath,                                    // Original path
+                normalizedPath.replace(/^\.\//, ''),              // Remove ./
+                normalizedPath.split('/').slice(1).join('/'),     // Remove first directory
+                normalizedPath.split('/').slice(2).join('/'),     // Remove first two directories
+                normalizedPath.split('/').pop(),                  // File name only
             ];
             
-            // 同时尝试不同的文件扩展名
+            // Try different file extensions at the same time
             const extensions = ['', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
             
             for (const attempt of attempts) {
                 if (!attempt) continue;
                 
-                // 尝试不同扩展名
+                // Try different extensions
                 for (const ext of extensions) {
                     const testPath = attempt + ext;
                     
-                    // 在 fileMap 中查找
+                    // Search in fileMap
                     for (const [key, file] of this.fileMap.entries()) {
                         const normalizedKey = key.replace(/\\/g, '/');
                         
-                        // 精确匹配
+                        // Exact match
                         if (normalizedKey === testPath) return file;
                         
-                        // 文件名匹配（忽略路径）
+                        // File name match (ignore path)
                         if (normalizedKey.endsWith('/' + testPath) || normalizedKey === testPath) return file;
                         
-                        // 路径结尾匹配
+                        // Path ending match
                         if (testPath.length > 3 && normalizedKey.endsWith(testPath)) return file;
                     }
                 }
@@ -463,7 +499,7 @@ class TweetBrowser {
             return null;
         };
         
-        // 解析头像
+        // Parse avatar
         if (tweetData.userAvatarUrl) {
             const file = findFile(tweetData.userAvatarUrl);
             if (file) {
@@ -473,7 +509,7 @@ class TweetBrowser {
             }
         }
 
-        // 解析媒体图片
+        // Parse media images
         if (tweetData.media?.images?.length > 0) {
             for (const imagePath of tweetData.media.images) {
                 const file = findFile(imagePath);
@@ -516,17 +552,17 @@ class TweetBrowser {
     }
 
     applyFilters() {
-        // Step 1: 在所有过滤操作之前，更新作者列表UI
+        // Step 1: Update author list UI before all filter operations
         this.updateAuthorFilter();
         
         let result = [...this.tweets];
 
-        // Step 2: 应用所有筛选条件
-        // 作者过滤
+        // Step 2: Apply all filter conditions
+        // Author filter
         if (this.filters.author !== 'all-authors') {
             result = result.filter(tweet => tweet.userHandle === this.filters.author);
         }
-        // 搜索查询过滤
+        // Search query filter
         if (this.filters.searchQuery) {
             result = result.filter(tweet => {
                 const query = this.filters.searchQuery;
@@ -535,11 +571,11 @@ class TweetBrowser {
                        (tweet.userHandle && tweet.userHandle.toLowerCase().includes(query));
             });
         }
-        // 内容过滤
+        // Content filter
         if (this.filters.content === 'images') {
             result = result.filter(tweet => tweet.media && tweet.media.images && tweet.media.images.length > 0);
         }
-        // 时间过滤
+        // Time filter
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -549,7 +585,7 @@ class TweetBrowser {
                 break;
             case 'week':
                 const startOfWeek = new Date(today);
-                startOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // 本周一
+                startOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Monday of this week
                 result = result.filter(tweet => new Date(tweet.timestamp) >= startOfWeek);
                 break;
             case 'month':
@@ -564,7 +600,7 @@ class TweetBrowser {
                 try {
                     const metadata = this.getMetadataManager();
                     if (!metadata || typeof metadata.getTweetMetadata !== 'function') return false;
-                    const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                    const tweetMetadata = metadata.getTweetMetadata(tweet);
                     return tweetMetadata && tweetMetadata.tags && tweetMetadata.tags.includes(this.filters.tag);
                 } catch (error) {
                     console.warn('Tag filtering error:', error);
@@ -575,20 +611,27 @@ class TweetBrowser {
 
         // Collection filtering
         if (this.filters.collection !== 'all-collections') {
+            console.log('Applying collection filter:', this.filters.collection);
+            const beforeCount = result.length;
             result = result.filter(tweet => {
                 try {
                     const metadata = this.getMetadataManager();
                     if (!metadata || typeof metadata.getTweetMetadata !== 'function') return false;
-                    const tweetMetadata = metadata.getTweetMetadata(tweet.id);
-                    return tweetMetadata && tweetMetadata.collection === this.filters.collection;
+                    const tweetMetadata = metadata.getTweetMetadata(tweet);
+                    const hasCollection = tweetMetadata && tweetMetadata.collection === this.filters.collection;
+                    if (hasCollection) {
+                        console.log('Tweet matches collection:', tweet.id, tweetMetadata.collection);
+                    }
+                    return hasCollection;
                 } catch (error) {
                     console.warn('Collection filtering error:', error);
                     return false;
                 }
             });
+            console.log('Collection filtering result:', beforeCount, '->', result.length);
         }
 
-        // Step 3: 更新过滤器选项并渲染
+        // Step 3: Update filter options and render
         this.updateTagFilter();
         this.updateCollectionFilter();
         this.filteredTweets = result;
@@ -597,7 +640,7 @@ class TweetBrowser {
 
     renderTweets() {
         const container = document.getElementById('tweetsContainer');
-        container.innerHTML = ''; // 清空容器
+        container.innerHTML = ''; // Clear container
 
         if (this.filteredTweets.length === 0) {
             const emptyTitle = this.getI18nMessage('emptyStateNoMatchesTitle') || 'No matches found';
@@ -640,7 +683,7 @@ class TweetBrowser {
                     <div class="user-info">
                         <h4>${this.escapeHtml(userName)}</h4>
                         <span class="user-handle">@${this.escapeHtml(userHandle)}</span>
-                        ${tweet.isThread ? `<span style="background: #1da1f2; color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 2px; display: inline-block;">🧵 推文串 (${tweet.threadTweets?.length || 0}条)</span>` : ''}
+                        ${tweet.isThread ? `<span style="background: #1da1f2; color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 2px; display: inline-block;">🧵 Thread (${tweet.threadTweets?.length || 0} tweets)</span>` : ''}
                     </div>
                 </div>
                 <p class="tweet-text">${text}</p>
@@ -677,8 +720,8 @@ class TweetBrowser {
         const container = document.getElementById('tweetsContainer');
         container.innerHTML = `
             <div class="empty-state">
-                <h3>📂 开始浏览你的推文收藏</h3>
-                <p>点击上方的"📁 Select Tweet Folder"按钮选择保存的推文文件夹。<br>支持HTML和JSON格式的推文文件。</p>
+                <h3>📂 Start browsing your tweet collection</h3>
+                <p>Click the "📁 Select Tweet Folder" button above to select your saved tweet folder.<br>Supports HTML and JSON format tweet files.</p>
             </div>
         `;
     }
@@ -701,7 +744,7 @@ class TweetBrowser {
             this.loadedFileIds.delete(sourceFileId);
         }
         
-        // 最终的数据处理流程
+        // Final data processing flow
         this.updateStats();
         this.applyFilters();
         this.updateReloadMediaButtonVisibility();
@@ -722,33 +765,33 @@ class TweetBrowser {
 
     updateAuthorFilter() {
         const authorFilter = document.getElementById('authorFilter');
-        const selectedAuthorHandle = authorFilter.value; // 保存当前选中的账号名
+        const selectedAuthorHandle = authorFilter.value; // Save current selected account name
 
-        // 1. 使用 Map 收集唯一的作者信息，以账号名为键，名字为值
+        // 1. Use Map to collect unique author info, with account name as key and name as value
         const authorMap = new Map();
         this.tweets.forEach(tweet => {
             if (tweet.userHandle && !authorMap.has(tweet.userHandle)) {
-                // 如果作者名字不存在，则用账号名作为备用
+                // If author name doesn't exist, use account name as fallback
                 authorMap.set(tweet.userHandle, tweet.userName || tweet.userHandle);
             }
         });
 
-        // 2. 将作者信息从 Map 转为数组，并按名字排序
+        // 2. Convert author info from Map to array and sort by name
         const sortedAuthors = Array.from(authorMap.entries())
             .sort(([, nameA], [, nameB]) => nameA.toLowerCase().localeCompare(nameB.toLowerCase()));
 
-        // 3. 清空并重新填充下拉列表
+        // 3. Clear and repopulate dropdown list
         // Note: The text for 'all-authors' is set via localizePage now
         const allAuthorsText = this.getI18nMessage('allAuthorsOption') || 'All Authors';
         authorFilter.innerHTML = `<option value="all-authors" data-i18n="allAuthorsOption">${allAuthorsText}</option>`;
         sortedAuthors.forEach(([handle, name]) => {
             const option = document.createElement('option');
-            option.value = handle; // 值是唯一的账号名，用于筛选
-            option.textContent = name; // 显示的是作者名字
+            option.value = handle; // Value is unique account name for filtering
+            option.textContent = name; // Display author name
             authorFilter.appendChild(option);
         });
 
-        // 4. 恢复之前的选中状态
+        // 4. Restore previous selection state
         if (authorMap.has(selectedAuthorHandle)) {
             authorFilter.value = selectedAuthorHandle;
         } else {
@@ -769,9 +812,13 @@ class TweetBrowser {
 
     updateTagFilter() {
         const tagFilter = document.getElementById('tagFilter');
-        if (!tagFilter) return;
+        if (!tagFilter) {
+            console.warn('tagFilter element not found');
+            return;
+        }
         
         const selectedTag = tagFilter.value;
+        console.log('Updating tag filter, current selection:', selectedTag);
         
         // Collect all unique tags from tweets
         const allTags = new Set();
@@ -779,10 +826,12 @@ class TweetBrowser {
         try {
             const metadata = this.getMetadataManager();
             if (metadata && typeof metadata.getTweetMetadata === 'function') {
+                console.log('Checking', this.tweets.length, 'tweets for tags');
                 this.tweets.forEach(tweet => {
                     try {
-                        const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                        const tweetMetadata = metadata.getTweetMetadata(tweet);
                         if (tweetMetadata && tweetMetadata.tags) {
+                            console.log('Tweet', tweet.id, 'has tags:', tweetMetadata.tags);
                             tweetMetadata.tags.forEach(tag => allTags.add(tag));
                         }
                     } catch (error) {
@@ -793,6 +842,8 @@ class TweetBrowser {
         } catch (error) {
             console.warn('Error updating tag filter:', error);
         }
+
+        console.log('Found unique tags:', Array.from(allTags));
 
         // Clear and repopulate tag filter
         tagFilter.innerHTML = '<option value="all-tags">All Tags</option>';
@@ -813,13 +864,19 @@ class TweetBrowser {
                 this.filters.tag = 'all-tags';
             }
         }
+        
+        console.log('Tag filter updated, final value:', tagFilter.value);
     }
 
     updateCollectionFilter() {
         const collectionFilter = document.getElementById('collectionFilter');
-        if (!collectionFilter) return;
+        if (!collectionFilter) {
+            console.warn('collectionFilter element not found');
+            return;
+        }
         
         const selectedCollection = collectionFilter.value;
+        console.log('Updating collection filter, current selection:', selectedCollection);
         
         // Collect all unique collections from tweets
         const allCollections = new Set();
@@ -827,10 +884,12 @@ class TweetBrowser {
         try {
             const metadata = this.getMetadataManager();
             if (metadata && typeof metadata.getTweetMetadata === 'function') {
+                console.log('Checking', this.tweets.length, 'tweets for collections');
                 this.tweets.forEach(tweet => {
                     try {
-                        const tweetMetadata = metadata.getTweetMetadata(tweet.id);
+                        const tweetMetadata = metadata.getTweetMetadata(tweet);
                         if (tweetMetadata && tweetMetadata.collection) {
+                            console.log('Tweet', tweet.id, 'has collection:', tweetMetadata.collection);
                             allCollections.add(tweetMetadata.collection);
                         }
                     } catch (error) {
@@ -841,6 +900,8 @@ class TweetBrowser {
         } catch (error) {
             console.warn('Error updating collection filter:', error);
         }
+
+        console.log('Found unique collections:', Array.from(allCollections));
 
         // Clear and repopulate collection filter
         collectionFilter.innerHTML = '<option value="all-collections">All Collections</option>';
@@ -861,6 +922,8 @@ class TweetBrowser {
                 this.filters.collection = 'all-collections';
             }
         }
+        
+        console.log('Collection filter updated, final value:', collectionFilter.value);
     }
 
     exportMetadata() {
@@ -920,7 +983,7 @@ class TweetBrowser {
         document.getElementById('importFile').value = '';
     }
 
-    // 更新重新加载图片按钮的可见性
+    // Update reload media button visibility
     updateReloadMediaButtonVisibility() {
         const reloadBtn = document.getElementById('reloadMediaBtn');
         const hasDataWithoutImages = this.tweets.length > 0 && 
@@ -931,7 +994,7 @@ class TweetBrowser {
         reloadBtn.style.display = hasDataWithoutImages ? 'inline-block' : 'none';
     }
 
-    // 触发文件选择对话框
+    // Trigger file selection dialog
     triggerFileSelection() {
         const fileInput = document.getElementById('fileInput');
         fileInput.click();
@@ -939,17 +1002,17 @@ class TweetBrowser {
 
 
 
-    // 恢复过滤器UI状态
+    // Restore filter UI state
     restoreFilterUI() {
-        // 恢复搜索框
+        // Restore search box
         document.getElementById('searchBox').value = this.filters.searchQuery || '';
         
-        // 恢复内容过滤器
+        // Restore content filters
         document.querySelectorAll('#content-filters .filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === this.filters.content);
         });
         
-        // 恢复时间过滤器
+        // Restore time filters
         document.querySelectorAll('#time-filters .filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === this.filters.time);
         });
@@ -957,37 +1020,37 @@ class TweetBrowser {
 
 
 
-    // 重新加载推文的媒体文件
+    // Reload tweet media files
     async reloadMediaForTweets(files) {
         if (!files.length || !this.tweets.length) return;
 
         try {
             this.showLoading();
             
-            // 更新文件映射
+            // Update file mapping
             this.fileMap = new Map(Array.from(files).map(file => [file.webkitRelativePath, file]));
             
-            // 为每个推文重新解析媒体路径
+            // Re-parse media paths for each tweet
             for (let i = 0; i < this.tweets.length; i++) {
                 const tweet = this.tweets[i];
                 const updatedTweet = await this.resolveMediaPaths(tweet);
                 this.tweets[i] = updatedTweet;
             }
 
-            // 更新UI
+            // Update UI
             this.applyFilters();
             this.updateReloadMediaButtonVisibility();
             
-            this.showNotification('图片已自动重新加载');
+            this.showNotification('Images automatically reloaded');
             
         } catch (error) {
-            console.error('重新加载图片失败:', error);
-            this.showNotification('重新加载图片失败');
+            console.error('Failed to reload images:', error);
+            this.showNotification('Failed to reload images');
         }
     }
 }
 
-// 全局函数
+// Global functions
 let browser;
 
 function showTweetDetail(index) {
@@ -1111,9 +1174,15 @@ function closeModal() {
     document.getElementById('modal').style.display = 'none';
 }
 
-// 绑定模态框事件监听器
+// Basic test logging
+console.log('=== TWEET BROWSER SCRIPT LOADED ===');
+
+// Bind modal event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DOM CONTENT LOADED ===');
     browser = new TweetBrowser();
+    window.tweetBrowser = browser; // Global access
+    console.log('=== TWEET BROWSER INITIALIZED ===', browser);
     
     // Debug: Check if modal elements exist
     console.log('Modal elements check:', {
@@ -1125,17 +1194,17 @@ document.addEventListener('DOMContentLoaded', () => {
         modalCloseBtn: !!document.getElementById('modalCloseBtn')
     });
     
-    // 模态框关闭按钮
+    // Modal close button
     document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
     
-    // 点击模态框外部关闭
+    // Click outside modal to close
     document.getElementById('modal').addEventListener('click', (e) => {
         if (e.target.id === 'modal') {
             closeModal();
         }
     });
 
-    // ESC键关闭模态框
+    // ESC key to close modal
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeModal();

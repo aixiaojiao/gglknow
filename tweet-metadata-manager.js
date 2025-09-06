@@ -118,6 +118,10 @@ class TweetMetadataManager {
         }
 
         this.saveMetadata();
+        
+        // Notify filters update
+        this.notifyFiltersUpdate();
+        
         return tweetId;
     }
 
@@ -187,6 +191,10 @@ class TweetMetadataManager {
         }
 
         this.saveMetadata();
+        
+        // Notify filters update
+        this.notifyFiltersUpdate();
+        
         return tweetId;
     }
 
@@ -249,6 +257,31 @@ class TweetMetadataManager {
     }
 
     /**
+     * Get all metadata (for export purposes)
+     */
+    getAllMetadata() {
+        return this.metadata;
+    }
+
+    /**
+     * Update tweet metadata (for import purposes)
+     */
+    updateTweetMetadata(tweetId, tweetData) {
+        if (!this.metadata.tweets) {
+            this.metadata.tweets = {};
+        }
+        this.metadata.tweets[tweetId] = tweetData;
+        this.saveMetadata();
+    }
+
+    /**
+     * Save to storage (alias for saveMetadata for backward compatibility)
+     */
+    saveToStorage() {
+        this.saveMetadata();
+    }
+
+    /**
      * Generate random color for tags
      */
     generateTagColor() {
@@ -305,14 +338,29 @@ class TweetMetadataManager {
 
         // Add tag button
         document.addEventListener('click', (e) => {
+            console.log('Click detected on:', e.target.id, e.target);
             if (e.target.id === 'modalAddTag') {
+                console.log('Add Tag button clicked!');
                 const tagInput = document.getElementById('tagInput');
-                const isVisible = tagInput.style.display === 'block';
+                if (!tagInput) {
+                    console.warn('tagInput element not found');
+                    return;
+                }
+                
+                // Use getComputedStyle to correctly detect display state
+                const computedStyle = window.getComputedStyle(tagInput);
+                const isVisible = computedStyle.display !== 'none' && tagInput.style.display === 'block';
+                
                 tagInput.style.display = isVisible ? 'none' : 'block';
+                
                 if (!isVisible) {
-                    tagInput.focus();
+                    // Show input box
+                    console.log('Showing tag input');
+                    setTimeout(() => tagInput.focus(), 50); // Delayed focus to ensure element is shown
                     this.showSuggestedTags();
                 } else {
+                    // Hide input box
+                    console.log('Hiding tag input');
                     this.hideSuggestedTags();
                 }
             }
@@ -628,15 +676,50 @@ class TweetMetadataManager {
         };
         reader.readAsText(file);
     }
+
+    /**
+     * Notify filters update
+     */
+    notifyFiltersUpdate() {
+        console.log('Notifying filters update');
+        
+        // Delayed execution to ensure DOM updates complete
+        setTimeout(() => {
+            if (window.tweetBrowser && typeof window.tweetBrowser.updateTagFilter === 'function') {
+                console.log('Updating tag filter via tweetBrowser');
+                window.tweetBrowser.updateTagFilter();
+            }
+            
+            if (window.tweetBrowser && typeof window.tweetBrowser.updateCollectionFilter === 'function') {
+                console.log('Updating collection filter via tweetBrowser');
+                window.tweetBrowser.updateCollectionFilter();
+            }
+            
+            // Try direct method calls if in same context
+            if (typeof updateTagFilter === 'function') {
+                console.log('Updating tag filter directly');
+                updateTagFilter();
+            }
+            if (typeof updateCollectionFilter === 'function') {
+                console.log('Updating collection filter directly');
+                updateCollectionFilter();
+            }
+        }, 50);
+    }
 }
+
+// Basic test logging
+console.log('=== TWEET METADATA MANAGER SCRIPT LOADED ===');
 
 // Initialize the metadata manager when the page loads
 let metadataManager;
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== METADATA MANAGER DOM CONTENT LOADED ===');
     metadataManager = new TweetMetadataManager();
     
     // Make it globally available
     window.metadataManager = metadataManager;
+    window.tweetMetadataManager = metadataManager; // backward compatibility
     
-    console.log('Tweet Metadata Manager initialized');
+    console.log('=== TWEET METADATA MANAGER INITIALIZED ===', metadataManager);
 });
