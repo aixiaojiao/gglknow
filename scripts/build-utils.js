@@ -85,6 +85,7 @@ switch (command) {
     copyFile(path.join(projectRoot, 'styles.css'), path.join(distPath, 'styles.css'));
     copyFile(path.join(projectRoot, 'tweet-browser.html'), path.join(distPath, 'tweet-browser.html'));
     copyFile(path.join(projectRoot, 'tweet-browser.js'), path.join(distPath, 'tweet-browser.js'));
+    copyFile(path.join(projectRoot, 'ai-tag-engine.js'), path.join(distPath, 'ai-tag-engine.js'));
     copyFile(path.join(projectRoot, 'tweet-metadata-manager.js'), path.join(distPath, 'tweet-metadata-manager.js'));
     copyFile(path.join(projectRoot, 'help.html'), path.join(distPath, 'help.html'));
     

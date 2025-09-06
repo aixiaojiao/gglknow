@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tag Engine Test</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-tweet {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #1da1f2;
+        }
+        .suggestion {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        button {
+            background: #1da1f2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .results { 
+            margin-top: 10px; 
+            padding: 10px; 
+            background: #f8f9fa; 
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Tag Engine Test</h1>
+
+    <div class="test-section">
+        <h2>Test Cases</h2>
+        
+        <div class="test-tweet">
+            <strong>Tech Tweet:</strong><br>
+            "Just released a new JavaScript library for React developers! Check it out on GitHub: https://github.com/user/awesome-lib. It includes TypeScript support and comprehensive documentation."
+            <br><button onclick="testTweet(techTweet)">🔍 Analyze</button>
+            <div id="tech-results" class="results" style="display:none;"></div>
+        </div>
+
+        <div class="test-tweet">
+            <strong>AI Tweet:</strong><br>
+            "ChatGPT and Claude are revolutionizing how we think about artificial intelligence. The latest neural network models show impressive capabilities in natural language processing and machine learning."
+            <br><button onclick="testTweet(aiTweet)">🔍 Analyze</button>
+            <div id="ai-results" class="results" style="display:none;"></div>
+        </div>
+
+        <div class="test-tweet">
+            <strong>Crypto Tweet:</strong><br>
+            "Bitcoin just hit a new milestone! Ethereum smart contracts are enabling amazing DeFi innovations. The blockchain revolution continues with Web3 applications."
+            <br><button onclick="testTweet(cryptoTweet)">🔍 Analyze</button>
+            <div id="crypto-results" class="results" style="display:none;"></div>
+        </div>
+
+        <div class="test-tweet">
+            <strong>Thread Tweet:</strong><br>
+            "🧵 Thread about startup fundraising: 1/ Raising capital is one of the most challenging aspects of building a startup. Here's what I learned from our Series A..."
+            <br><button onclick="testTweet(threadTweet)">🔍 Analyze</button>
+            <div id="thread-results" class="results" style="display:none;"></div>
+        </div>
+
+        <div class="test-tweet">
+            <strong>Question Tweet:</strong><br>
+            "What do you think about the future of remote work? Any thoughts on how companies should adapt their management strategies? Help me understand different perspectives."
+            <br><button onclick="testTweet(questionTweet)">🔍 Analyze</button>
+            <div id="question-results" class="results" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>AI Engine Stats</h2>
+        <div id="stats"></div>
+        <button onclick="showStats()">📊 Show Stats</button>
+        <button onclick="resetLearning()" style="background: #ff6b6b; margin-left: 10px;">🗑️ Reset Learning</button>
+    </div>
+
+    <script src="ai-tag-engine.js"></script>
+    <script>
+        // Initialize AI Engine
+        const aiEngine = new AITagEngine();
+        
+        // Test tweet data
+        const techTweet = {
+            tweetText: "Just released a new JavaScript library for React developers! Check it out on GitHub: https://github.com/user/awesome-lib. It includes TypeScript support and comprehensive documentation.",
+            userName: "DevUser",
+            userHandle: "devuser"
+        };
+
+        const aiTweet = {
+            tweetText: "ChatGPT and Claude are revolutionizing how we think about artificial intelligence. The latest neural network models show impressive capabilities in natural language processing and machine learning.",
+            userName: "AIResearcher", 
+            userHandle: "airesearcher"
+        };
+
+        const cryptoTweet = {
+            tweetText: "Bitcoin just hit a new milestone! Ethereum smart contracts are enabling amazing DeFi innovations. The blockchain revolution continues with Web3 applications.",
+            userName: "CryptoExpert",
+            userHandle: "cryptoexpert"
+        };
+
+        const threadTweet = {
+            tweetText: "🧵 Thread about startup fundraising: 1/ Raising capital is one of the most challenging aspects of building a startup. Here's what I learned from our Series A...",
+            userName: "StartupFounder",
+            userHandle: "startupfounder"
+        };
+
+        const questionTweet = {
+            tweetText: "What do you think about the future of remote work? Any thoughts on how companies should adapt their management strategies? Help me understand different perspectives.",
+            userName: "BusinessAnalyst",
+            userHandle: "bizanalyst"
+        };
+
+        // Test function
+        async function testTweet(tweetData) {
+            const resultId = tweetData.userHandle + '-results';
+            const resultDiv = document.getElementById(resultId);
+            
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = '<em>Analyzing...</em>';
+                
+                const analysis = await aiEngine.analyzeTweet(tweetData);
+                
+                if (analysis.suggestions.length === 0) {
+                    resultDiv.innerHTML = '<em>No suggestions found</em>';
+                    return;
+                }
+                
+                let html = '<strong>AI Suggestions:</strong><br>';
+                analysis.suggestions.forEach(suggestion => {
+                    const confidence = Math.round(suggestion.confidence * 100);
+                    html += `<span class="suggestion" title="${suggestion.reason}">${suggestion.tag} (${confidence}% - ${suggestion.source})</span>`;
+                });
+                
+                html += '<br><br><strong>Analysis:</strong><br>';
+                html += `Text Length: ${analysis.analysis.textLength}<br>`;
+                html += `Has Links: ${analysis.analysis.hasLinks}<br>`;
+                html += `Has Media: ${analysis.analysis.hasMedia}<br>`;
+                html += `Is Reply: ${analysis.analysis.isReply}<br>`;
+                html += `Is Thread: ${analysis.analysis.isThread}`;
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<span style="color: red;">Error: ${error.message}</span>`;
+                console.error('Test error:', error);
+            }
+        }
+
+        function showStats() {
+            const stats = aiEngine.getStats();
+            document.getElementById('stats').innerHTML = `
+                <strong>Engine Statistics:</strong><br>
+                Rules Count: ${stats.rulesCount}<br>
+                Total Learned Patterns: ${stats.totalPatterns}<br>
+                AI Enabled: ${stats.settings.enabled}<br>
+                Confidence Threshold: ${stats.settings.confidence_threshold}<br>
+                Max Suggestions: ${stats.settings.max_suggestions}<br>
+                Auto-Apply Threshold: ${stats.settings.auto_apply_threshold}
+            `;
+        }
+
+        function resetLearning() {
+            aiEngine.resetLearning();
+            alert('Learning patterns reset successfully!');
+        }
+
+        // Initial stats display
+        showStats();
+
+        console.log('AI Tag Engine Test loaded successfully');
+        console.log('AI Engine:', aiEngine);
+    </script>
+</body>
+</html>

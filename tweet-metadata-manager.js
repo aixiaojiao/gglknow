@@ -9,6 +9,7 @@ class TweetMetadataManager {
     constructor() {
         this.storageKey = 'tweetMetadata';
         this.metadata = this.loadMetadata();
+        this.aiEngine = new AITagEngine();
         this.setupEventListeners();
     }
 
@@ -279,6 +280,60 @@ class TweetMetadataManager {
      */
     saveToStorage() {
         this.saveMetadata();
+    }
+
+    /**
+     * Generate AI tag suggestions for a tweet
+     */
+    async generateAITagSuggestions(tweetData) {
+        try {
+            const analysis = await this.aiEngine.analyzeTweet(tweetData);
+            return analysis;
+        } catch (error) {
+            console.error('Error generating AI tag suggestions:', error);
+            return { suggestions: [], confidence: 0 };
+        }
+    }
+
+    /**
+     * Apply AI-suggested tags with user confirmation
+     */
+    async suggestAndApplyTags(tweetData, autoApply = false) {
+        const analysis = await this.generateAITagSuggestions(tweetData);
+        
+        if (analysis.suggestions.length === 0) {
+            return { applied: [], suggested: [] };
+        }
+
+        const applied = [];
+        const suggested = [];
+
+        for (const suggestion of analysis.suggestions) {
+            // Auto-apply high confidence tags if enabled
+            if (autoApply && suggestion.confidence >= this.aiEngine.settings.auto_apply_threshold) {
+                this.addTagToTweet(tweetData, suggestion.tag);
+                applied.push(suggestion);
+                
+                // Learn from auto-application (considered as accepted)
+                this.aiEngine.learnFromUserAction(tweetData, suggestion.tag, true);
+            } else {
+                suggested.push(suggestion);
+            }
+        }
+
+        return { applied, suggested, analysis };
+    }
+
+    /**
+     * Handle user feedback on AI suggestions
+     */
+    handleAISuggestionFeedback(tweetData, suggestion, accepted) {
+        if (accepted) {
+            this.addTagToTweet(tweetData, suggestion.tag);
+        }
+        
+        // Learn from user feedback
+        this.aiEngine.learnFromUserAction(tweetData, suggestion.tag, accepted);
     }
 
     /**

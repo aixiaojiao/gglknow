@@ -709,6 +709,124 @@
             opacity: 0.8;
         }
 
+        /* AI Suggestions Styles */
+        .ai-suggestions {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--glass-background);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ai-suggestions-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ai-icon {
+            font-size: 16px;
+        }
+
+        .ai-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-color);
+            flex: 1;
+        }
+
+        .ai-toggle-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ai-toggle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .ai-toggle-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .ai-suggested-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            margin: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .ai-suggested-tag:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .ai-suggested-tag .confidence-badge {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 1px 4px;
+            font-size: 10px;
+            margin-left: 4px;
+        }
+
+        .ai-suggested-tag .tag-reason {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+
+        .ai-suggested-tag:hover .tag-reason {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .ai-loading::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
         .modal-tags-section, .modal-collections-section {
             margin: 16px 0;
             padding: 12px;
@@ -1089,6 +1207,16 @@
                     <div class="section-title">🏷️ Tags</div>
                     <div id="modalTweetTags" class="modal-tweet-tags"></div>
                     <input type="text" id="tagInput" class="tag-input" placeholder="Add tags (press Enter)..." />
+                    
+                    <!-- AI Suggestions -->
+                    <div id="aiSuggestions" class="ai-suggestions" style="display: none;">
+                        <div class="ai-suggestions-header">
+                            <span class="ai-icon">🤖</span>
+                            <span class="ai-title">AI Suggestions</span>
+                            <button id="aiSuggestionsToggle" class="ai-toggle-btn">✨ Get AI Suggestions</button>
+                        </div>
+                        <div id="aiSuggestionsList" class="suggested-tags"></div>
+                    </div>
                 </div>
                 
                 <!-- Collections Section -->
@@ -1139,6 +1267,7 @@
         </div>
     </div>
     
+    <script src="ai-tag-engine.js"></script>
     <script src="tweet-metadata-manager.js"></script>
     <script src="tweet-browser.js"></script>
 </body>

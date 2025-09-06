@@ -127,6 +127,15 @@ class TweetBrowser {
         document.getElementById('importFile').addEventListener('change', (e) => {
             this.importMetadata(e.target.files[0]);
         });
+
+        // AI Suggestions
+        document.addEventListener('click', async (e) => {
+            if (e.target.id === 'aiSuggestionsToggle') {
+                await this.generateAISuggestions();
+            } else if (e.target.classList.contains('ai-suggested-tag')) {
+                this.handleAISuggestionClick(e.target);
+            }
+        });
     }
 
     showNotification(message) {
@@ -1070,6 +1079,121 @@ class TweetBrowser {
             this.showNotification('Failed to reload images');
         }
     }
+
+    // AI Suggestions Methods
+    async generateAISuggestions() {
+        const toggleBtn = document.getElementById('aiSuggestionsToggle');
+        const suggestionsContainer = document.getElementById('aiSuggestionsList');
+        const aiSuggestionsDiv = document.getElementById('aiSuggestions');
+
+        if (!window.currentTweetData) {
+            this.showNotification('No tweet data available for AI analysis');
+            return;
+        }
+
+        try {
+            // Show loading state
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = 'Analyzing...';
+            suggestionsContainer.innerHTML = '<div class="ai-loading">Generating AI suggestions...</div>';
+            aiSuggestionsDiv.style.display = 'block';
+
+            const metadata = this.getMetadataManager();
+            const analysis = await metadata.generateAITagSuggestions(window.currentTweetData);
+
+            if (analysis.suggestions.length === 0) {
+                suggestionsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No AI suggestions available</div>';
+                toggleBtn.textContent = 'No Suggestions';
+                return;
+            }
+
+            // Display suggestions
+            suggestionsContainer.innerHTML = analysis.suggestions.map(suggestion => {
+                const confidencePercent = Math.round(suggestion.confidence * 100);
+                return `
+                    <div class="ai-suggested-tag" data-tag="${suggestion.tag}" data-confidence="${suggestion.confidence}">
+                        <span class="tag-text">${suggestion.tag}</span>
+                        <span class="confidence-badge">${confidencePercent}%</span>
+                        <div class="tag-reason">${suggestion.reason}</div>
+                    </div>
+                `;
+            }).join('');
+
+            toggleBtn.textContent = `Found ${analysis.suggestions.length} suggestions`;
+            toggleBtn.disabled = false;
+
+            // Show analysis info
+            console.log('AI Analysis:', analysis);
+
+        } catch (error) {
+            console.error('Error generating AI suggestions:', error);
+            suggestionsContainer.innerHTML = '<div style="color: var(--error-color); font-size: 12px;">Error generating suggestions</div>';
+            toggleBtn.textContent = 'Error occurred';
+            toggleBtn.disabled = false;
+        }
+    }
+
+    handleAISuggestionClick(tagElement) {
+        const tagName = tagElement.getAttribute('data-tag');
+        const confidence = parseFloat(tagElement.getAttribute('data-confidence'));
+
+        if (!window.currentTweetData || !tagName) {
+            return;
+        }
+
+        try {
+            const metadata = this.getMetadataManager();
+            
+            // Add the tag
+            metadata.handleAISuggestionFeedback(window.currentTweetData, { tag: tagName, confidence }, true);
+            
+            // Visual feedback
+            tagElement.style.background = 'var(--success-color)';
+            tagElement.style.color = 'white';
+            tagElement.innerHTML = `<span>✓ ${tagName} added</span>`;
+            
+            // Update the modal display
+            this.updateModalTags();
+            
+            // Update filters
+            this.updateTagFilter();
+            
+            this.showNotification(`Tag "${tagName}" added successfully!`);
+
+            // Remove the suggestion after a short delay
+            setTimeout(() => {
+                tagElement.remove();
+            }, 1500);
+
+        } catch (error) {
+            console.error('Error applying AI suggestion:', error);
+            this.showNotification('Error adding tag');
+        }
+    }
+
+    updateModalTags() {
+        const modalTweetTags = document.getElementById('modalTweetTags');
+        
+        if (!window.currentTweetData || !modalTweetTags) {
+            return;
+        }
+
+        try {
+            const metadata = this.getMetadataManager();
+            const tweetMetadata = metadata.getTweetMetadata(window.currentTweetData);
+            
+            if (tweetMetadata.tags && tweetMetadata.tags.length > 0) {
+                modalTweetTags.innerHTML = tweetMetadata.tags.map(tag => {
+                    const tagInfo = metadata.metadata.tags[tag] || { color: '#1da1f2' };
+                    return `<span class="tag" style="background: ${tagInfo.color}">${tag}</span>`;
+                }).join('');
+            } else {
+                modalTweetTags.innerHTML = '<span style="color: var(--text-muted); font-size: 12px;">No tags assigned</span>';
+            }
+        } catch (error) {
+            console.error('Error updating modal tags:', error);
+        }
+    }
 }
 
 // Global functions
@@ -1100,6 +1224,9 @@ function showTweetDetail(index) {
     }
     
     console.log('Tweet data:', tweet);
+    
+    // Store current tweet data for AI analysis
+    window.currentTweetData = tweet;
     
     const modal = document.getElementById('modal');
     if (!modal) {
@@ -1185,6 +1312,18 @@ function showTweetDetail(index) {
     if (window.metadataManager) {
         window.metadataManager.renderTweetTags(tweet);
         window.metadataManager.renderTweetCollections(tweet);
+    }
+
+    // Reset AI suggestions interface
+    const aiSuggestionsDiv = document.getElementById('aiSuggestions');
+    const aiSuggestionsToggle = document.getElementById('aiSuggestionsToggle');
+    const aiSuggestionsList = document.getElementById('aiSuggestionsList');
+    
+    if (aiSuggestionsDiv && aiSuggestionsToggle && aiSuggestionsList) {
+        aiSuggestionsDiv.style.display = 'none';
+        aiSuggestionsToggle.textContent = '✨ Get AI Suggestions';
+        aiSuggestionsToggle.disabled = false;
+        aiSuggestionsList.innerHTML = '';
     }
     
     // Show the modal
