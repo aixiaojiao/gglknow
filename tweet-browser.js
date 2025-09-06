@@ -246,8 +246,10 @@ class TweetBrowser {
         try {
             if (filename.endsWith('.json')) {
                 const data = JSON.parse(content);
-                // Ensure timestamp exists and is valid
-                if (!data.timestamp && data.tweetTime) {
+                // Prioritize tweet publish time over save time
+                if (data.tweetTime) {
+                    data.timestamp = data.tweetTime; // Use original tweet publish time
+                } else if (!data.timestamp && data.tweetTime) {
                     data.timestamp = data.tweetTime;
                 }
                 return data;
@@ -308,22 +310,32 @@ class TweetBrowser {
                 const avatarImgEl = card.querySelector('.avatar');
                 
                 let timestamp = null;
-                const timeEl = card.querySelector('.meta-item span:last-child');
-                if (timeEl) {
-                    const timeText = timeEl.textContent.trim();
-                    console.log('Found time element with text:', timeText);
-                    const date = new Date(timeText);
-                    if (!isNaN(date)) {
-                        timestamp = date.toISOString();
-                        console.log('Parsed timestamp:', timestamp);
-                    } else {
-                        console.log('Failed to parse time:', timeText);
+                // Try multiple selectors for time elements
+                const timeSelectors = [
+                    '.tweet-meta span', // New format
+                    '.meta-item span:last-child', // Old format
+                    '.tweet-time',
+                    '[data-timestamp]'
+                ];
+                
+                for (const selector of timeSelectors) {
+                    const timeEl = card.querySelector(selector);
+                    if (timeEl) {
+                        const timeText = timeEl.textContent.trim();
+                        console.log(`Found time element with selector "${selector}" and text:`, timeText);
+                        const date = new Date(timeText);
+                        if (!isNaN(date)) {
+                            timestamp = date.toISOString();
+                            console.log('Successfully parsed timestamp:', timestamp);
+                            break;
+                        } else {
+                            console.log('Failed to parse time:', timeText);
+                        }
                     }
-                } else {
-                    console.log('No time element found with selector .meta-item span:last-child');
                 }
-                // Only use current time as fallback if no valid timestamp found
+                
                 if (!timestamp) {
+                    console.log('No time element found with any selector');
                     timestamp = new Date().toISOString();
                     console.log('Using fallback timestamp:', timestamp);
                 }
@@ -402,22 +414,32 @@ class TweetBrowser {
             const avatarImgEl = doc.querySelector('.avatar');
 
             let timestamp = null;
-            const timeEl = doc.querySelector('.meta-item span:last-child');
-            if (timeEl) {
-                const timeText = timeEl.textContent.trim();
-                console.log('Found time element with text:', timeText);
-                const date = new Date(timeText);
-                if (!isNaN(date)) {
-                    timestamp = date.toISOString();
-                    console.log('Parsed timestamp:', timestamp);
-                } else {
-                    console.log('Failed to parse time:', timeText);
+            // Try multiple selectors for time elements
+            const timeSelectors = [
+                '.tweet-meta span', // New format
+                '.meta-item span:last-child', // Old format
+                '.tweet-time',
+                '[data-timestamp]'
+            ];
+            
+            for (const selector of timeSelectors) {
+                const timeEl = doc.querySelector(selector);
+                if (timeEl) {
+                    const timeText = timeEl.textContent.trim();
+                    console.log(`Found time element with selector "${selector}" and text:`, timeText);
+                    const date = new Date(timeText);
+                    if (!isNaN(date)) {
+                        timestamp = date.toISOString();
+                        console.log('Successfully parsed timestamp:', timestamp);
+                        break;
+                    } else {
+                        console.log('Failed to parse time:', timeText);
+                    }
                 }
-            } else {
-                console.log('No time element found with selector .meta-item span:last-child');
             }
-            // Only use current time as fallback if no valid timestamp found
+            
             if (!timestamp) {
+                console.log('No time element found with any selector');
                 timestamp = new Date().toISOString();
                 console.log('Using fallback timestamp:', timestamp);
             }
