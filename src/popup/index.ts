@@ -6,6 +6,7 @@
 
 import { ExtensionSettings, PopupState } from '@/types';
 import { log, debounce, localizePage } from '@/utils';
+import { BRANDING, hasBranding } from '@/config/branding';
 import { 
   getSettings, 
   saveSettings, 
@@ -84,6 +85,9 @@ class PopupManager {
       // Set version
       this.elements.version.textContent = getExtensionVersion();
 
+      // Author attribution
+      this.renderAttribution();
+
       // Setup event listeners
       this.setupEventListeners();
 
@@ -103,6 +107,26 @@ class PopupManager {
   /**
    * Setup event listeners
    */
+  /**
+   * Render the author attribution line.
+   *
+   * Builds the node rather than assigning innerHTML, and does nothing at all
+   * when branding is unconfigured so an unfilled build shows no empty row.
+   */
+  private renderAttribution(): void {
+    const container = document.getElementById('attribution');
+    if (!container || !hasBranding()) return;
+
+    const link = document.createElement('a');
+    link.href = BRANDING.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = BRANDING.handle;
+
+    container.textContent = '';
+    container.appendChild(link);
+  }
+
   private setupEventListeners(): void {
     // Save settings button
     this.elements.saveBtn.addEventListener('click', this.handleSaveSettings.bind(this));

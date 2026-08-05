@@ -348,5 +348,9 @@
   "notifyTweetHiddenSessionOnly": {
     "message": "仅从当前视图移除——重新载入文件夹后会再次出现。",
     "description": "Shown when a dismissal could not be saved."
+  },
+  "savedByAttribution": {
+    "message": "由 GglKnow 保存",
+    "description": "Attribution line at the foot of a saved tweet page."
   }
 }

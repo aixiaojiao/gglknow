@@ -13,6 +13,7 @@ import {
     log
 } from '@/utils';
 import { TweetData, FileGenerationResult, ThreadData } from '@/types';
+import { BRANDING, hasBranding } from '@/config/branding';
 
 /**
  * Generate file content based on tweet data and settings
@@ -105,6 +106,32 @@ function buildThreadMediaPaths(threadData: ThreadData): {
 }
 
 /**
+ * One-line attribution appended to saved pages.
+ *
+ * Deliberately minimal: a signature, not a call to action. Returns an empty
+ * string when branding is unconfigured, so the markup simply disappears.
+ */
+function buildAttributionFooter(): string {
+    if (!hasBranding()) return '';
+
+    let label = '由 GglKnow 保存';
+    try {
+        label = chrome.i18n.getMessage('savedByAttribution') || label;
+    } catch {
+        // i18n is unavailable outside the extension runtime; keep the default
+    }
+
+    return `
+        <p class="saved-by">${escapeHtml(label)} · <a href="${escapeHtml(BRANDING.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(BRANDING.handle)}</a></p>`;
+}
+
+/** Styling for the attribution line, kept as quiet as the markup */
+const ATTRIBUTION_STYLES = `
+        .saved-by { margin-top: 16px; text-align: center; font-size: 12px; color: #8b98a5; }
+        .saved-by a { color: #8b98a5; text-decoration: none; }
+        .saved-by a:hover { text-decoration: underline; }`;
+
+/**
  * Build YAML front matter so saved tweets slot straight into an Obsidian vault
  */
 function buildFrontmatter(tweet: TweetData): string {
@@ -168,14 +195,14 @@ function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
         .media-grid.double, .media-grid.triple, .media-grid.quad { grid-template-columns: 1fr 1fr; }
         .media-grid img, .media-grid video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .tweet-meta { font-size: 13px; color: #536471; padding-top: 12px; border-top: 1px solid #e7e7e7; margin-top: 12px; }
-        .view-original-btn { display: inline-block; margin-top: 8px; color: #1d9bf0; text-decoration: none; font-weight: bold; }
+        .view-original-btn { display: inline-block; margin-top: 8px; color: #1d9bf0; text-decoration: none; font-weight: bold; }${ATTRIBUTION_STYLES}
     </style>
 </head>
 <body>
     <div class="container">
         <h1>${escapeHtml(pageTitle)}</h1>
         <p style="color: #536471; margin-bottom: 20px;">由 @${escapeHtml(mainTweet.userHandle)} 发布于 ${escapeHtml(formatTimestamp(mainTweet.tweetTime || mainTweet.timestamp))}</p>
-        ${tweetBlocks}
+        ${tweetBlocks}${buildAttributionFooter()}
     </div>
 </body>
 </html>`;
@@ -288,12 +315,12 @@ function generateHTMLFile(tweetData: TweetData): FileGenerationResult {
         .media-grid.double, .media-grid.triple, .media-grid.quad { grid-template-columns: 1fr 1fr; }
         .media-grid img, .media-grid video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .tweet-meta { font-size: 13px; color: #536471; padding-top: 12px; border-top: 1px solid #e7e7e7; margin-top: 12px; }
-        .view-original-btn { display: inline-block; margin-top: 8px; color: #1d9bf0; text-decoration: none; font-weight: bold; }
+        .view-original-btn { display: inline-block; margin-top: 8px; color: #1d9bf0; text-decoration: none; font-weight: bold; }${ATTRIBUTION_STYLES}
     </style>
 </head>
 <body>
     <div class="container">
-        ${htmlBlock}
+        ${htmlBlock}${buildAttributionFooter()}
     </div>
 </body>
 </html>`;

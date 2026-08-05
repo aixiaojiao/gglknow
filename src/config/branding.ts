@@ -1,8 +1,10 @@
 /**
  * Author Attribution Configuration
  *
- * The single place where the author's own channels are defined. Everything the
- * extension renders as attribution reads from here.
+ * The values live in branding.json so there is exactly one source of truth:
+ * the bundled TypeScript imports it directly, and the build emits a small
+ * branding.js from the same file for the plain-JS pages (tweet browser) that
+ * are copied into dist rather than bundled.
  *
  * Two rules this config exists to keep enforceable:
  *
@@ -10,10 +12,11 @@
  *    script adds the collect button and nothing else. Injecting promotion into
  *    someone else's site is the one change that could plausibly draw a platform
  *    complaint, and it is also what users punish with uninstalls.
- * 2. If `handle` or `url` is left empty, every attribution surface renders
- *    nothing at all. Shipping with the placeholders still in place produces a
- *    clean build, not a broken or embarrassing one.
+ * 2. If `handle` or `url` is empty, every attribution surface renders nothing.
+ *    An unconfigured build is a clean build, not a broken one.
  */
+
+import brandingData from './branding.json';
 
 export interface BrandingLink {
   /** Text shown to the user */
@@ -22,35 +25,22 @@ export interface BrandingLink {
   url: string;
 }
 
-export const BRANDING = {
-  /**
-   * Handle shown in the one-line attribution, e.g. '@yourhandle'.
-   * Leave empty to disable every attribution surface.
-   */
-  handle: '',
+export interface Branding {
+  /** Handle shown in the one-line attribution, e.g. '@yourhandle' */
+  handle: string;
+  /** Where that attribution links to */
+  url: string;
+  /** Extra channels listed in the popup only — never in saved files */
+  links: BrandingLink[];
+}
 
-  /**
-   * Where that one-line attribution links to.
-   * Leave empty to disable every attribution surface.
-   */
-  url: '',
-
-  /**
-   * Extra channels listed in the popup and the tweet browser only — never in
-   * saved files, which stay to a single minimal line.
-   */
-  links: [] as BrandingLink[]
-} as const;
+export const BRANDING: Branding = {
+  handle: brandingData.handle || '',
+  url: brandingData.url || '',
+  links: (brandingData.links as BrandingLink[]) || []
+};
 
 /** Whether enough is configured to render anything at all */
 export function hasBranding(): boolean {
   return Boolean(BRANDING.handle && BRANDING.url);
-}
-
-/**
- * The one-line attribution used in saved files: "由 GglKnow 保存 · @handle".
- * Returns an empty string when unconfigured.
- */
-export function attributionText(): string {
-  return hasBranding() ? BRANDING.handle : '';
 }

@@ -1390,6 +1390,32 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * Render the author attribution line at the foot of the page.
+ *
+ * Reads the config branding.js publishes at build time. When that file is
+ * absent — running this page straight from the repo — nothing renders, which
+ * is the intended fallback rather than an error.
+ */
+function renderAttribution() {
+    const container = document.getElementById('attribution');
+    const branding = window.GGLKNOW_BRANDING;
+    if (!container || !branding || !branding.handle || !branding.url) return;
+
+    const label = document.createTextNode('由 GglKnow 保存 · ');
+    const link = document.createElement('a');
+    link.href = branding.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = branding.handle;
+
+    container.textContent = '';
+    container.appendChild(label);
+    container.appendChild(link);
+}
+
+document.addEventListener('DOMContentLoaded', renderAttribution);
+
 function showTweetDetail(index) {
     console.log('Global showTweetDetail called with index:', index);
     
