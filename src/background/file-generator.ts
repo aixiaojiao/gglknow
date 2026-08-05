@@ -8,6 +8,8 @@ import {
     generateTweetFilename,
     getFileExtension,
     formatTimestamp,
+    escapeHtml,
+    toMarkdownQuote,
     log
 } from '@/utils';
 import { TweetData, FileGenerationResult, ThreadData } from '@/types';
@@ -67,14 +69,18 @@ export async function generateFileForThread(
 }
 
 /**
- * Generate HTML file content for a complete thread
+ * Map every media URL in a thread to the local path it will be downloaded to.
+ *
+ * The media downloader numbers files sequentially across the whole thread, so
+ * this walks the tweets in the same order and de-duplicates the same way. Both
+ * the HTML and Markdown generators must use this map — deriving paths from a
+ * per-tweet index instead is what left every image after the first tweet
+ * pointing at the wrong file.
  */
-function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
-    const mainTweet = threadData.mainTweet || threadData.tweets[0];
-    const pageTitle = `推文串 - ${mainTweet.userName}`;
-    const filename = `${generateTweetFilename(mainTweet)}_thread`;
-
-    // Create a global mapping for all media URLs to unique local paths
+function buildThreadMediaPaths(threadData: ThreadData): {
+    imagePathMap: Map<string, string>;
+    videoPathMap: Map<string, string>;
+} {
     const imagePathMap = new Map<string, string>();
     const videoPathMap = new Map<string, string>();
     let imageCounter = 1;
@@ -95,7 +101,44 @@ function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
         });
     });
 
-    const tweetBlocks = threadData.tweets.map(tweet => 
+    return { imagePathMap, videoPathMap };
+}
+
+/**
+ * Build YAML front matter so saved tweets slot straight into an Obsidian vault
+ */
+function buildFrontmatter(tweet: TweetData): string {
+    const yamlString = (value: string): string =>
+        `"${String(value ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
+    const postedAt = tweet.tweetTime || tweet.timestamp;
+    const date = postedAt ? postedAt.slice(0, 10) : '';
+
+    return [
+        '---',
+        `author: ${yamlString(tweet.userName)}`,
+        `handle: ${yamlString('@' + tweet.userHandle)}`,
+        `date: ${date}`,
+        `source: ${yamlString(tweet.tweetUrl)}`,
+        `saved: ${yamlString(tweet.timestamp)}`,
+        'tags:',
+        '  - tweet',
+        '---',
+        ''
+    ].join('\n');
+}
+
+/**
+ * Generate HTML file content for a complete thread
+ */
+function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
+    const mainTweet = threadData.mainTweet || threadData.tweets[0];
+    const pageTitle = `推文串 - ${mainTweet.userName}`;
+    const filename = `${generateTweetFilename(mainTweet)}_thread`;
+
+    const { imagePathMap, videoPathMap } = buildThreadMediaPaths(threadData);
+
+    const tweetBlocks = threadData.tweets.map(tweet =>
         createTweetHTMLBlock(tweet, imagePathMap, videoPathMap)
     ).join('');
 
@@ -105,7 +148,7 @@ function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${pageTitle}</title>
+    <title>${escapeHtml(pageTitle)}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; padding: 20px; }
@@ -130,8 +173,8 @@ function generateThreadHTMLFile(threadData: ThreadData): FileGenerationResult {
 </head>
 <body>
     <div class="container">
-        <h1>${pageTitle}</h1>
-        <p style="color: #536471; margin-bottom: 20px;">由 @${mainTweet.userHandle} 发布于 ${formatTimestamp(mainTweet.timestamp)}</p>
+        <h1>${escapeHtml(pageTitle)}</h1>
+        <p style="color: #536471; margin-bottom: 20px;">由 @${escapeHtml(mainTweet.userHandle)} 发布于 ${escapeHtml(formatTimestamp(mainTweet.tweetTime || mainTweet.timestamp))}</p>
         ${tweetBlocks}
     </div>
 </body>
@@ -151,23 +194,33 @@ function generateThreadMarkdownFile(threadData: ThreadData): FileGenerationResul
     const mainTweet = threadData.mainTweet || threadData.tweets[0];
     const filename = `${generateTweetFilename(mainTweet)}_thread`;
 
-    const markdownBlocks = threadData.tweets.map(tweet => {
-        let content = `> ${tweet.text}\n\n`;
-        (tweet.media?.images || []).forEach((img, index) => {
-            content += `![Image ${index + 1}](./media/image_${index + 1}${getFileExtension(img) || '.jpg'})\n\n`;
+    const { imagePathMap, videoPathMap } = buildThreadMediaPaths(threadData);
+
+    const markdownBlocks = threadData.tweets.map((tweet, tweetIndex) => {
+        // Quote every line, so multi-line tweets stay inside the blockquote
+        let content = `${toMarkdownQuote(tweet.text)}\n\n`;
+
+        (tweet.media?.images || []).forEach(img => {
+            const path = imagePathMap.get(img);
+            if (path) content += `![](${path})\n\n`;
         });
-        (tweet.media?.videos || []).forEach((vid, index) => {
-            content += `[Video ${index + 1}](./media/video_${index + 1}${getFileExtension(vid) || '.mp4'})\n\n`;
+        (tweet.media?.videos || []).forEach(vid => {
+            const path = videoPathMap.get(vid);
+            if (path) content += `[Video](${path})\n\n`;
         });
-        content += `*— ${tweet.userName} (@${tweet.userHandle}) on ${formatTimestamp(tweet.tweetTime || tweet.timestamp)}* | [View Original](${tweet.tweetUrl})\n\n---\n\n`;
+
+        content += `*— ${tweet.userName} (@${tweet.userHandle}) · ${formatTimestamp(tweet.tweetTime || tweet.timestamp)}* · [原文](${tweet.tweetUrl})\n`;
+
+        // No trailing rule after the final tweet
+        if (tweetIndex < threadData.tweets.length - 1) {
+            content += '\n---\n\n';
+        }
         return content;
     }).join('');
 
-    const fullContent = `
-# Thread by @${mainTweet.userHandle}
+    const fullContent = `${buildFrontmatter(mainTweet)}# 推文串 — ${mainTweet.userName} (@${mainTweet.userHandle})
 
-${markdownBlocks}
-`;
+${markdownBlocks}`;
 
     return {
         content: fullContent,
@@ -217,7 +270,7 @@ function generateHTMLFile(tweetData: TweetData): FileGenerationResult {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${pageTitle}</title>
+    <title>${escapeHtml(pageTitle)}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; padding: 20px; }
@@ -261,10 +314,12 @@ function createTweetHTMLBlock(
     videoPathMap: Map<string, string>
 ): string {
     const userAvatarPath = tweetData.userAvatar ? `media/avatar${getFileExtension(tweetData.userAvatar) || '.jpg'}` : '';
-    
-    // Process text with inline media
-    let processedText = tweetData.text;
-    
+
+    // Escape before any media HTML is spliced in, so tweet text containing
+    // <, > or & renders as written instead of corrupting the saved page.
+    // Line breaks survive escaping and are rendered by `white-space: pre-wrap`.
+    let processedText = escapeHtml(tweetData.text);
+
     if (tweetData.inlineMedia && tweetData.inlineMedia.length > 0) {
         // Replace inline media placeholders with actual HTML
         tweetData.inlineMedia.forEach((mediaItem) => {
@@ -274,8 +329,8 @@ function createTweetHTMLBlock(
                 
             if (mediaPath) {
                 const mediaHtml = mediaItem.type === 'image'
-                    ? `<img src="${mediaPath}" alt="内联图片" style="max-width: 100%; border-radius: 8px; margin: 8px 0; display: block;">`
-                    : `<video src="${mediaPath}" controls muted loop playsinline style="max-width: 100%; border-radius: 8px; margin: 8px 0; display: block;"></video>`;
+                    ? `<img src="${escapeHtml(mediaPath)}" alt="内联图片" style="max-width: 100%; border-radius: 8px; margin: 8px 0; display: block;">`
+                    : `<video src="${escapeHtml(mediaPath)}" controls muted loop playsinline style="max-width: 100%; border-radius: 8px; margin: 8px 0; display: block;"></video>`;
                 
                 // Replace placeholder with actual media
                 const placeholder = `[${mediaItem.type === 'image' ? '图片' : '视频'}${mediaItem.index + 1}]`;
@@ -302,8 +357,8 @@ function createTweetHTMLBlock(
     const mediaHTML = remainingMediaCount > 0 ? `
             <div class="tweet-media">
                 <div class="media-grid ${mediaGridClass}">
-                    ${imagePaths.map(p => `<img src="${p}" loading="lazy">`).join('')}
-                    ${videoPaths.map(p => `<video src="${p}" controls muted loop playsinline></video>`).join('')}
+                    ${imagePaths.map(p => `<img src="${escapeHtml(p)}" loading="lazy">`).join('')}
+                    ${videoPaths.map(p => `<video src="${escapeHtml(p)}" controls muted loop playsinline></video>`).join('')}
                 </div>
             </div>` : '';
     
@@ -314,18 +369,18 @@ function createTweetHTMLBlock(
     <div class="tweet-card">
         <div class="tweet-content">
             <div class="user-info">
-                ${userAvatarPath ? `<img src="${userAvatarPath}" alt="${tweetData.userName}" class="avatar">` : ''}
+                ${userAvatarPath ? `<img src="${escapeHtml(userAvatarPath)}" alt="${escapeHtml(tweetData.userName)}" class="avatar">` : ''}
                 <div class="user-details">
-                    <h2>${tweetData.userName}</h2>
-                    <p>@${tweetData.userHandle}</p>
+                    <h2>${escapeHtml(tweetData.userName)}</h2>
+                    <p>@${escapeHtml(tweetData.userHandle)}</p>
                 </div>
             </div>
             ${showMediaOnTop ? mediaHTML : ''}
             <div class="tweet-text">${processedText}</div>
             ${!showMediaOnTop ? mediaHTML : ''}
             <div class="tweet-meta">
-                <span>${formatTimestamp(tweetData.tweetTime || tweetData.timestamp)}</span>
-                <a href="${tweetData.tweetUrl}" target="_blank" class="view-original-btn">查看原文</a>
+                <span>${escapeHtml(formatTimestamp(tweetData.tweetTime || tweetData.timestamp))}</span>
+                <a href="${escapeHtml(tweetData.tweetUrl)}" target="_blank" rel="noopener noreferrer" class="view-original-btn">查看原文</a>
             </div>
         </div>
     </div>`;
@@ -335,16 +390,15 @@ function createTweetHTMLBlock(
  * Generate Markdown file content from tweet data
  */
 function generateMarkdownFile(tweetData: TweetData): FileGenerationResult {
-    let content = `
-# Tweet by ${tweetData.userName} (@${tweetData.userHandle})
+    let content = `${buildFrontmatter(tweetData)}# ${tweetData.userName} (@${tweetData.userHandle})
 
-> ${tweetData.text}
+${toMarkdownQuote(tweetData.text)}
 
 `;
 
     (tweetData.media?.images || []).forEach((img, index) => {
         const ext = getFileExtension(img) || '.jpg';
-        content += `![Image ${index + 1}](media/image_${index + 1}${ext})\n\n`;
+        content += `![](media/image_${index + 1}${ext})\n\n`;
     });
 
     (tweetData.media?.videos || []).forEach((vid, index) => {
@@ -352,12 +406,11 @@ function generateMarkdownFile(tweetData: TweetData): FileGenerationResult {
         content += `[Video ${index + 1}](media/video_${index + 1}${ext})\n\n`;
     });
 
-    content += `
----
-- **发布时间:** ${formatTimestamp(tweetData.tweetTime || tweetData.timestamp)}
-- **原始链接:** [View on Twitter](${tweetData.tweetUrl})
+    content += `---
+
+*— ${tweetData.userName} (@${tweetData.userHandle}) · ${formatTimestamp(tweetData.tweetTime || tweetData.timestamp)}* · [原文](${tweetData.tweetUrl})
 `;
-   
+
    return {
      content,
      filename: generateTweetFilename(tweetData),

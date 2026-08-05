@@ -179,6 +179,34 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 /**
+ * Escape text for safe interpolation into generated HTML.
+ *
+ * Implemented as plain string replacement rather than via a DOM element,
+ * because the file generator runs in the service worker where there is no
+ * `document`. Line breaks are deliberately left intact — the saved page
+ * renders tweet text with `white-space: pre-wrap`.
+ */
+export function escapeHtml(text: string): string {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Escape text for use inside a Markdown blockquote, and prefix every line so
+ * multi-line tweets stay inside the quote instead of breaking out of it.
+ */
+export function toMarkdownQuote(text: string): string {
+  return String(text ?? '')
+    .split('\n')
+    .map(line => (line.trim() ? `> ${line}` : '>'))
+    .join('\n');
+}
+
+/**
  * Format timestamp to readable string
  */
 export function formatTimestamp(timestamp: string): string {

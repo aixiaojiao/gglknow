@@ -60,54 +60,45 @@ export function extractTweetData(tweetElement: Element): TweetData {
  * Extract user information (name, handle, avatar)
  */
 function extractUserInfo(tweetElement: Element, data: TweetData): void {
-  // Extract user name using multiple selectors
-  const userNameSelectors = [
-    '[data-testid="User-Names"] a span',
-    '[data-testid="User-Names"] span',
-    '[data-testid="User-Name"] span',
-    'div[dir="ltr"] span',
-    'article span[dir="ltr"]'
-  ];
-  
-  let userNameElement: Element | null = null;
-  for (const selector of userNameSelectors) {
-    userNameElement = tweetElement.querySelector(selector);
-    if (userNameElement && userNameElement.textContent?.trim()) {
-      break;
+  // X renders both the display name and the @handle inside this one container.
+  // (The old code looked for "User-Names" — plural — which matches nothing on
+  // current X, so it always fell through to a very loose span selector.)
+  const nameContainer = tweetElement.querySelector('[data-testid="User-Name"]');
+
+  if (nameContainer) {
+    const spans = Array.from(nameContainer.querySelectorAll('span'))
+      .map(span => span.textContent?.trim() || '')
+      .filter(Boolean);
+
+    // The handle is the only span rendered with a leading @
+    const handleSpan = spans.find(text => text.startsWith('@'));
+    if (handleSpan) {
+      data.userHandle = handleSpan.slice(1);
+    }
+
+    // The display name is the first span that is neither the handle nor the
+    // "·" separator that precedes the timestamp
+    const nameSpan = spans.find(text => !text.startsWith('@') && text !== '·');
+    if (nameSpan) {
+      data.userName = nameSpan;
     }
   }
-  
-  if (userNameElement) {
-    data.userName = userNameElement.textContent?.trim() || '';
+
+  // Fall back to the profile link if that container's markup ever changes
+  if (!data.userHandle) {
+    const profileLink = tweetElement.querySelector('a[role="link"][href^="/"]');
+    const href = profileLink?.getAttribute('href') || '';
+    // Anchor to the first path segment so status links don't yield the post id
+    const match = href.match(/^\/([A-Za-z0-9_]{1,15})(?:\/|$)/);
+    if (match) {
+      data.userHandle = match[1];
+    }
   }
 
   // Extract user avatar
   const avatarImg = tweetElement.querySelector('[data-testid="Tweet-User-Avatar"] img') as HTMLImageElement;
   if (avatarImg?.src) {
     data.userAvatar = avatarImg.src;
-  }
-
-  // Extract user handle
-  const userHandleSelectors = [
-    '[data-testid="User-Names"] a[href*="/"]',
-    'a[href^="/"][role="link"]',
-    'a[href*="twitter.com/"]',
-    'a[href*="x.com/"]'
-  ];
-  
-  let userHandleElement: Element | null = null;
-  for (const selector of userHandleSelectors) {
-    userHandleElement = tweetElement.querySelector(selector);
-    if (userHandleElement && userHandleElement.getAttribute('href')) {
-      break;
-    }
-  }
-  
-  if (userHandleElement) {
-    const href = userHandleElement.getAttribute('href');
-    if (href) {
-      data.userHandle = href.replace(/^.*\//, '').replace('@', '');
-    }
   }
 
   // Fallback: extract from URL if no user info found
@@ -165,7 +156,7 @@ function extractTweetContent(tweetElement: Element, data: TweetData): void {
   }
   
   if (tweetTextElement) {
-    data.text = cleanTextContent(tweetTextElement.textContent || '');
+    data.text = extractFormattedText(tweetTextElement);
   }
 
   // Set media positioning preference for HTML generation
@@ -182,14 +173,70 @@ function extractTweetContent(tweetElement: Element, data: TweetData): void {
 
 
 /**
- * Clean text content by removing UI elements and excessive whitespace
+ * Clean text content by normalizing whitespace.
+ *
+ * Only horizontal whitespace is collapsed — line breaks are part of the tweet's
+ * content and must survive, otherwise multi-line tweets get saved as one long
+ * unreadable line.
  */
 function cleanTextContent(text: string): string {
   return text
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/^\s+|\s+$/g, '') // Trim
-    .replace(/\n\s*\n/g, '\n') // Remove empty lines
+    .replace(/\r\n?/g, '\n') // Normalize line endings
+    .replace(/[^\S\n]+/g, ' ') // Collapse spaces/tabs but keep newlines
+    .replace(/[ \t]*\n[ \t]*/g, '\n') // Trim spaces hugging line breaks
+    .replace(/\n{3,}/g, '\n\n') // Cap runs of blank lines
     .trim();
+}
+
+/**
+ * Extract text from a tweet text container while preserving the structure that
+ * X expresses through markup rather than characters.
+ *
+ * `textContent` is not usable here: it drops <br> line breaks entirely, ignores
+ * block boundaries, and silently discards emoji (X renders those as
+ * <img alt="😀">). Walking the tree ourselves keeps all three.
+ */
+function extractFormattedText(root: Element): string {
+  let out = '';
+
+  const walk = (node: Node): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.textContent || '';
+      return;
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    const element = node as Element;
+    const tag = element.tagName.toLowerCase();
+
+    if (tag === 'br') {
+      out += '\n';
+      return;
+    }
+
+    // Emoji are images on X; their alt attribute holds the actual character
+    if (tag === 'img') {
+      out += element.getAttribute('alt') || '';
+      return;
+    }
+
+    const isBlock = tag === 'div' || tag === 'p';
+    if (isBlock && out && !out.endsWith('\n')) {
+      out += '\n';
+    }
+
+    for (const child of Array.from(element.childNodes)) {
+      walk(child);
+    }
+
+    if (isBlock && out && !out.endsWith('\n')) {
+      out += '\n';
+    }
+  };
+
+  walk(root);
+  return cleanTextContent(out);
 }
 
 
@@ -351,6 +398,41 @@ export function findTweetElements(): Element[] {
   return Array.from(elements);
 }
 
+/** X's own control for revealing the truncated remainder of a long post */
+const SHOW_MORE_TESTID = 'tweet-text-show-more-link';
+
+/** Exact labels X puts on that control, per locale */
+const SHOW_MORE_LABELS = new Set(['show more', '显示更多', '顯示更多']);
+
+/**
+ * Expand a truncated long post so its full text can be read.
+ *
+ * This is the only place the extension drives X's own UI, so it is kept as
+ * narrow as possible: one known control, matched on its full label. The
+ * previous substring match ("show" / "more" / "更多") also matched things like
+ * "Show more replies" and the post's overflow menu, so collecting a post could
+ * fire off unrelated interactions.
+ */
+function expandShowMoreLink(tweetElement: Element): void {
+  const control = tweetElement.querySelector(`[data-testid="${SHOW_MORE_TESTID}"]`);
+  if (!(control instanceof HTMLElement)) {
+    return;
+  }
+
+  const label = (control.textContent || '').trim().toLowerCase();
+  if (!SHOW_MORE_LABELS.has(label)) {
+    log('info', 'TweetExtractor', 'Show-more control had an unexpected label, leaving it alone', { label });
+    return;
+  }
+
+  try {
+    control.click();
+    log('info', 'TweetExtractor', 'Expanded truncated post text');
+  } catch (error) {
+    log('warn', 'TweetExtractor', 'Failed to expand post text', error);
+  }
+}
+
 /**
  * Extract article content for Twitter Articles
  */
@@ -358,42 +440,7 @@ function extractArticleContent(tweetElement: Element): string | null {
   try {
     log('info', 'TweetExtractor', 'Attempting to extract article content');
 
-    // Try to find and click "Show more" or "显示更多" button to expand article content
-    const expandButtons: HTMLElement[] = [];
-    
-    // Look for elements with expand-related attributes
-    const ariaExpandButtons = tweetElement.querySelectorAll('[aria-label*="Show more"], [aria-label*="显示更多"]');
-    ariaExpandButtons.forEach(btn => btn instanceof HTMLElement && expandButtons.push(btn));
-    
-    // Look for elements with expand-related test ids
-    const testIdButtons = tweetElement.querySelectorAll('[data-testid*="expand"]');
-    testIdButtons.forEach(btn => btn instanceof HTMLElement && expandButtons.push(btn));
-    
-    // Look for buttons/spans with expand-related text content
-    const allButtons = tweetElement.querySelectorAll('div[role="button"], span[role="button"], button');
-    allButtons.forEach(el => {
-      if (el instanceof HTMLElement) {
-        const text = el.textContent?.toLowerCase() || '';
-        if (text.includes('show') || text.includes('more') || text.includes('expand') ||
-            text.includes('显示') || text.includes('更多') || text.includes('展开') ||
-            text.includes('read more') || text.includes('阅读更多')) {
-          expandButtons.push(el);
-        }
-      }
-    });
-
-    // Try to click expand button if found
-    for (const button of expandButtons) {
-      if (button && button instanceof HTMLElement) {
-        log('info', 'TweetExtractor', 'Found expand button, attempting to click');
-        try {
-          button.click();
-          break;
-        } catch (error) {
-          log('warn', 'TweetExtractor', 'Failed to click expand button', error);
-        }
-      }
-    }
+    expandShowMoreLink(tweetElement);
 
     // Article-specific content selectors - ordered by priority
     const articleSelectors = [
@@ -454,9 +501,11 @@ function extractArticleContent(tweetElement: Element): string | null {
       const seenTexts = new Set<string>();
       
       for (const block of textBlocks) {
-        const blockText = block.textContent?.trim() || '';
-        if (blockText && 
-            blockText.length > 20 && 
+        // Use the structure-preserving reader here too, so long-form posts keep
+        // their paragraph breaks instead of arriving as one run-on line
+        const blockText = extractFormattedText(block);
+        if (blockText &&
+            blockText.length > 20 &&
             !isUIElement(blockText) &&
             !seenTexts.has(blockText) &&
             !isPartOfLargerText(blockText, textParts)) {
@@ -543,7 +592,6 @@ function isUIElement(text: string): boolean {
     /^(下午|上午|AM|PM)\d/, // Time stamps
     /^\d+\.?\d*万?\s*(查看|回复|转推|点赞)/, // Engagement numbers (improved)
     /^\d{4}年\d{1,2}月\d{1,2}日/, // Chinese date format
-    /^Theclues@follow_clues$/, // User handle repetition
     /^\d{10,}$/, // Very long numbers (like timestamps or IDs)
     /^[\s\n\r]*$/, // Empty or whitespace-only
     /^[·\s]*$/, // Just dots and spaces
@@ -580,36 +628,22 @@ function cleanAndFormatArticleContent(textParts: string[]): string {
   // Take the longest text as the main content
   let mainContent = sortedParts[0] || '';
   
-  // Remove UI elements and clean up
+  // Strip surrounding X chrome that gets swept up with the body text
   mainContent = mainContent
-    // Remove user handles that appear at the beginning
-    .replace(/^(已置顶)?(Theclues@follow_clues)+/g, '')
-    // Remove trailing UI elements (more comprehensive)
+    // Premium upsell that X appends under long-form posts
     .replace(/(想发布自己的文章？升级为\s*Premium\+.*?)$/gs, '')
+    .replace(/升级为\s*Premium\+/g, '')
+    // Trailing "2:05 下午 · 2026年8月5日" style timestamp line
     .replace(/(下午|上午)\d{1,2}:\d{2}\s*·\s*\d{4}年\d{1,2}月\d{1,2}日.*?$/gs, '')
-    // Remove engagement numbers and view counts (more patterns)
+    // Engagement counters and long numeric ids at line ends
     .replace(/\d+\.?\d*万?\s*(查看|回复|转推|点赞)\s*\d*$/gm, '')
-    .replace(/\d{10,}\s*$/gm, '') // Remove long number sequences
-    .replace(/收藏中\.{3}/g, '') // Remove "收藏中..."
-    .replace(/收藏串/g, '') // Remove "收藏串"
-    .replace(/升级为\s*Premium\+/g, '') // Remove Premium prompts
-    // Remove HTML-like content and whitespace
-    .replace(/\s*<[^>]*>\s*/g, ' ') // Remove any HTML tags
-    .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
-    .replace(/\n\s*\n\s*\n/g, '\n\n') // Clean up multiple newlines
-    // Remove trailing whitespace and empty lines
-    .replace(/\s+$/gm, '') // Remove trailing spaces from each line
-    .trim();
-
-  // Add proper paragraph breaks for better readability
-  mainContent = mainContent
-    // Add breaks before numbered sections
-    .replace(/(\d+\.\s*)/g, '\n\n$1')
-    // Add breaks before key sections
-    .replace(/(初始状态：|行动：|计算.*?后的情况|为什么)/g, '\n\n$1')
-    // Add breaks before explanations
-    .replace(/(表面上看|但这里隐藏|并非真实增值|溢价压缩是预警|数学本质)/g, '\n\n$1')
-    // Clean up multiple breaks again
+    .replace(/\d{10,}\s*$/gm, '')
+    // This extension's own button labels, if they landed inside the capture
+    .replace(/收藏中\.{3}/g, '')
+    .replace(/收藏串/g, '')
+    // Whitespace tidy-up — horizontal only, line breaks are real content
+    .replace(/[^\S\n]{2,}/g, ' ')
+    .replace(/[ \t]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 

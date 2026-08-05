@@ -1,5 +1,38 @@
 # 更新日志
 
+## [2.2.2] - 2026-08-05
+
+### 🐛 重要修复 (Critical Bug Fixes)
+
+#### 保存内容的排版终于是对的 (Text Formatting)
+- **修复换行全部丢失**: `cleanTextContent` 用 `\s+` 归一化空白，而 `\s` 包含 `\n`，导致**任何多行推文都被压成一整行**。现在只折叠水平空白，换行完整保留。
+- **修复 emoji 被丢弃**: X 把 emoji 渲染成 `<img alt="🎉">`，而 `textContent` 会直接丢掉它们。新增按 DOM 树遍历的提取器，读取 `alt` 还原 emoji，同时处理 `<br>` 和块级边界。
+- **HTML 模板的 `white-space: pre-wrap` 现在真正生效**（此前文本里已无换行可渲染）。
+
+#### HTML 转义 (HTML Escaping)
+- **修复正文未转义**: 生成 HTML 时直接插值推文内容，推文中出现 `<`、`>`、`&` 会破坏页面结构甚至吞掉后续内容；保存的 HTML 在本地打开时还会执行推文里的脚本。现在用户名、正文、链接、媒体路径、页面标题全部转义。
+
+#### 推文串图片路径 (Thread Media Paths)
+- **修复串的 Markdown 图片全是坏链**: Markdown 用每条推文内部的下标生成 `image_N`，而下载器按整串全局递增编号，第二条之后全部错位。现在 HTML 与 Markdown 共用同一张全局路径表。
+- **修复重复图片导致的编号漂移**: 下载器不去重、生成器去重，同一张图出现在多条推文时两边编号会岔开。下载侧改为按顺序去重，与生成器一致。
+
+#### 用户信息提取 (User Info)
+- **修复失效的选择器**: 代码首选 `[data-testid="User-Names"]`（复数），在当前 X 上匹配数为 0，一直在回退到极宽松的 `div[dir="ltr"] span`。改用实际存在的 `[data-testid="User-Name"]`，按 `@` 前缀区分昵称与 handle。
+- **修复 handle 可能取到推文 ID**: 回退逻辑 `href.replace(/^.*\//, '')` 对 `/user/status/123` 会得到 `123`，改为锚定首个路径段。
+
+### 🔒 平台合规 (Platform Safety)
+- **收紧唯一一处程序化点击**: 展开长文时原先遍历推文内所有按钮，只要文案含 `show`/`more`/`更多`/`展开` 就点击，会误中「Show more replies」和推文的更多菜单。现在只匹配 X 官方的 `data-testid="tweet-text-show-more-link"`，且要求文案完整命中白名单。
+- 扩展仍然保持零联网、零 API 调用、零互动自动化：全部数据来自页面 DOM，全部保存动作由用户点击触发。
+
+### ✨ 格式优化 (Format Improvements)
+- **Markdown 增加 YAML front matter**（author / handle / date / source / saved / tags），可直接入 Obsidian 库。
+- **Markdown 引用块逐行加前缀**，多行推文不再从引用块里跑出去。
+- 串的 Markdown 末尾不再多出一条分隔线；图片改用简洁的 `![](media/image_N.jpg)`。
+
+### 🧹 清理 (Cleanup)
+- **移除写死的调试规则**: 正文清洗里硬编码了某个具体用户的 handle，以及一组从某条期权推文里抠出来的分段关键词（`初始状态：`/`溢价压缩是预警`/`数学本质` 等），这些规则对其他推文只会在错误位置插入换行。段落结构现在直接来自 DOM，不再靠关键词猜。
+- 移除会误伤正文的 `<[^>]*>` 剥离规则（会破坏 `a<b` 这类文本）。
+
 ## [2.2.1] - 2025-09-06
 
 ### 🐛 重要修复 (Critical Bug Fixes)

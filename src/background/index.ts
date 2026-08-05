@@ -278,15 +278,31 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
     let totalMediaCount = 0;
     if (settings.downloadMedia) {
       const allMedia: MediaToDownload = { images: [], videos: [], avatar: null };
-      
+
+      // De-duplicate while preserving order: the file generators map each
+      // distinct URL to media/image_N, so the downloader has to number the
+      // same distinct URLs in the same sequence or the links won't resolve.
+      const seenImages = new Set<string>();
+      const seenVideos = new Set<string>();
+
       threadData.tweets.forEach(tweet => {
-        allMedia.images.push(...(tweet.media?.images || []));
-        allMedia.videos.push(...(tweet.media?.videos || []));
+        (tweet.media?.images || []).forEach(url => {
+          if (!seenImages.has(url)) {
+            seenImages.add(url);
+            allMedia.images.push(url);
+          }
+        });
+        (tweet.media?.videos || []).forEach(url => {
+          if (!seenVideos.has(url)) {
+            seenVideos.add(url);
+            allMedia.videos.push(url);
+          }
+        });
         if (!allMedia.avatar) {
           allMedia.avatar = tweet.userAvatar || null;
         }
       });
-      
+
       totalMediaCount = allMedia.images.length + allMedia.videos.length + (allMedia.avatar ? 1 : 0);
 
       if (totalMediaCount > 0) {
