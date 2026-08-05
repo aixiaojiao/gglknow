@@ -4,6 +4,15 @@
 
 ### 🐛 重要修复 (Critical Bug Fixes)
 
+#### AI 标签引擎此前从未产生过任何建议 (AI Tag Engine Never Worked)
+- **字段名错误导致引擎全盲**: `extractAnalyzableText` 读取 `tweetData.tweetText`，而全项目产生的字段是 `text`（`userBio` 更是完全不存在）。引擎对每条推文分析的都是空字符串，永远返回 0 条建议。`hasLinks`、`isReply` 同样读错字段；`hasMedia` 读 `tweetData.images`，而实际嵌套在 `media.images` 下。
+- **评分公式方向相反**: 置信度按 `命中数 / 规则词表长度` 计算，导致**词表越丰富的规则越难触发**。`tech` 有 14 个关键词，命中 3 个只得 0.257，而阈值是 0.6——`tech` 和 `ai` 这两个最核心的标签结构性地永远无法命中。改为按命中数计分并饱和。
+- **持久化缺兜底**: `saveSettings` / `saveUserPatterns` 没有 try/catch，localStorage 超配额会直接抛出。
+
+实测：同一条推文，修复前建议数 0，修复后为 5（ai 0.90、thread 0.90、tech 0.80、tutorial 0.80、open-source 0.80）。
+
+### 🐛 重要修复 (Critical Bug Fixes)
+
 #### 保存内容的排版终于是对的 (Text Formatting)
 - **修复换行全部丢失**: `cleanTextContent` 用 `\s+` 归一化空白，而 `\s` 包含 `\n`，导致**任何多行推文都被压成一整行**。现在只折叠水平空白，换行完整保留。
 - **修复 emoji 被丢弃**: X 把 emoji 渲染成 `<img alt="🎉">`，而 `textContent` 会直接丢掉它们。新增按 DOM 树遍历的提取器，读取 `alt` 还原 emoji，同时处理 `<br>` 和块级边界。

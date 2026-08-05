@@ -8,6 +8,12 @@
  * 4. Context analysis
  */
 
+/**
+ * Matches needed for a rule to score at its full declared confidence.
+ * A pattern hit counts double, so one pattern already gets most of the way.
+ */
+const MATCHES_FOR_FULL_STRENGTH = 3;
+
 class AITagEngine {
     constructor() {
         this.storageKey = 'aiTagEngine';
@@ -39,7 +45,13 @@ class AITagEngine {
      * Save settings
      */
     saveSettings() {
-        localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
+            return true;
+        } catch (error) {
+            console.error('Error saving AI settings:', error);
+            return false;
+        }
     }
 
     /**
@@ -63,7 +75,13 @@ class AITagEngine {
      * Save user patterns
      */
     saveUserPatterns() {
-        localStorage.setItem('aiTagPatterns', JSON.stringify(this.userPatterns));
+        try {
+            localStorage.setItem('aiTagPatterns', JSON.stringify(this.userPatterns));
+            return true;
+        } catch (error) {
+            console.error('Error saving AI tag patterns:', error);
+            return false;
+        }
     }
 
     /**
@@ -198,19 +216,12 @@ class AITagEngine {
      * Extract analyzable text from tweet data
      */
     extractAnalyzableText(tweetData) {
-        let text = '';
-        
-        // Main tweet text
-        if (tweetData.tweetText) {
-            text += tweetData.tweetText + ' ';
-        }
-        
-        // User bio or description if available
-        if (tweetData.userBio) {
-            text += tweetData.userBio + ' ';
-        }
-
-        return text.toLowerCase();
+        // The field is `text` — see TweetData in src/types/index.ts. This read
+        // `tweetData.tweetText`, a name nothing in the project ever produces,
+        // so the engine analysed an empty string for every tweet and could
+        // never return a keyword-based suggestion. `userBio` does not exist at
+        // all and has been dropped.
+        return String((tweetData && tweetData.text) || '').toLowerCase();
     }
 
     /**
@@ -243,11 +254,19 @@ class AITagEngine {
                 }
             }
 
-            // Calculate confidence based on matches
+            // Calculate confidence based on matches.
+            //
+            // This used to divide by totalChecks — the size of the rule's whole
+            // vocabulary — which made a rule harder to trigger the more
+            // keywords it knew. 'tech' listed 14 keywords, so matching three of
+            // them scored 0.26 against a 0.6 threshold and the tag could never
+            // fire; only rules with very short lists ever did. Score on the
+            // number of matches instead, saturating so a keyword-stuffed post
+            // does not run away with it.
             if (matches > 0) {
-                const matchRatio = matches / totalChecks;
-                const confidence = Math.min(rule.confidence * matchRatio * 1.5, 1.0);
-                
+                const strength = Math.min(matches / MATCHES_FOR_FULL_STRENGTH, 1);
+                const confidence = Math.min(rule.confidence * (0.6 + 0.4 * strength), 1.0);
+
                 if (confidence >= this.settings.confidence_threshold) {
                     results.push({
                         tag,
@@ -309,8 +328,8 @@ class AITagEngine {
         const results = [];
 
         // Analyze links
-        if (tweetData.tweetText) {
-            const links = this.extractLinks(tweetData.tweetText);
+        if (tweetData && tweetData.text) {
+            const links = this.extractLinks(tweetData.text);
             for (const link of links) {
                 const domain = this.extractDomain(link);
                 if (this.domainRules[domain]) {
@@ -454,7 +473,7 @@ class AITagEngine {
         }
 
         // Learn from domains
-        const links = this.extractLinks(tweetData.tweetText || '');
+        const links = this.extractLinks((tweetData && tweetData.text) || '');
         for (const link of links) {
             const domain = this.extractDomain(link);
             if (domain) {
@@ -511,16 +530,22 @@ class AITagEngine {
     }
 
     hasLinks(tweetData) {
-        return (tweetData.tweetText && tweetData.tweetText.includes('http')) || false;
+        return Boolean(tweetData && tweetData.text && tweetData.text.includes('http'));
     }
 
     hasMedia(tweetData) {
-        return (tweetData.images && tweetData.images.length > 0) || 
-               (tweetData.videos && tweetData.videos.length > 0) || false;
+        // Media is nested under `media` on TweetData. Reading tweetData.images
+        // and tweetData.videos meant this always returned false, so the 'media'
+        // context tag never fired.
+        const media = (tweetData && tweetData.media) || {};
+        return Boolean(
+            (media.images && media.images.length > 0) ||
+            (media.videos && media.videos.length > 0)
+        );
     }
 
     isReply(tweetData) {
-        return (tweetData.tweetText && tweetData.tweetText.startsWith('@')) || false;
+        return Boolean(tweetData && tweetData.text && tweetData.text.trimStart().startsWith('@'));
     }
 
     isThread(text) {
