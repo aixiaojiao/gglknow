@@ -340,5 +340,13 @@
   "tweetBrowserModalViewOriginal": {
     "message": "🔗 查看原始推文",
     "description": "查看原始推文的链接文本。"
+  },
+  "notifyTweetHidden": {
+    "message": "已从列表移除，本地文件保留不变。",
+    "description": "Shown when a tweet is dismissed and the dismissal was persisted."
+  },
+  "notifyTweetHiddenSessionOnly": {
+    "message": "仅从当前视图移除——重新载入文件夹后会再次出现。",
+    "description": "Shown when a dismissal could not be saved."
   }
-} 
+}

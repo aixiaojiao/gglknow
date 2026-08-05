@@ -340,5 +340,13 @@
   "tweetBrowserModalViewOriginal": {
     "message": "🔗 View Original Tweet",
     "description": "Link text to view the original tweet."
+  },
+  "notifyTweetHidden": {
+    "message": "Removed from the list. The saved file on your computer is untouched.",
+    "description": "Shown when a tweet is dismissed and the dismissal was persisted."
+  },
+  "notifyTweetHiddenSessionOnly": {
+    "message": "Removed from this view only — it will reappear the next time you load the folder.",
+    "description": "Shown when a dismissal could not be saved."
   }
-} 
+}

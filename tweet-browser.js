@@ -192,22 +192,67 @@ class TweetBrowser {
             this.fileMap = new Map(Array.from(files).map(file => [file.webkitRelativePath, file]));
             this.lastFolderName = currentFolderName;
             
-            const htmlFiles = Array.from(files).filter(file => file.name.endsWith('.html'));
-            let loadedCount = 0;
+            // Load HTML and JSON. JSON used to be filtered out here entirely,
+            // which left parseFile() unreachable — so anyone who picked JSON as
+            // their only save format saw a permanently empty browser, despite
+            // the empty-state text promising JSON support.
+            const candidates = Array.from(files).filter(file =>
+                file.name.endsWith('.html') || file.name.endsWith('.json')
+            );
 
-            for (const file of htmlFiles) {
+            // One collected tweet is written as <name>.html / <name>.json /
+            // <name>.md side by side, so group by path-without-extension and
+            // load a single representation per tweet. HTML wins because it
+            // already carries local media paths and thread structure.
+            const byStem = new Map();
+            for (const file of candidates) {
+                const path = file.webkitRelativePath || file.name;
+                const stem = path.replace(/\.[^./]+$/, '');
+                if (!byStem.has(stem)) byStem.set(stem, []);
+                byStem.get(stem).push(file);
+            }
+
+            let loadedCount = 0;
+            let jsonFallbackCount = 0;
+            let hiddenCount = 0;
+            const hiddenKeys = this.loadHiddenTweetKeys();
+
+            for (const group of byStem.values()) {
+                const file = group.find(f => f.name.endsWith('.html')) || group[0];
+                const path = file.webkitRelativePath || file.name;
+
                 try {
                     const content = await this.readFile(file);
-                    const parsedData = this.parseHTMLFile(content, file.webkitRelativePath);
-                    if (parsedData) {
-                        const tweet = await this.resolveMediaPaths(parsedData);
-                        tweet.id = `tweet-${this.tweets.length}-${Date.now()}`;
-                        this.tweets.push(tweet);
-                        loadedCount++;
+                    const isJson = file.name.endsWith('.json');
+                    const parsedData = isJson
+                        ? this.parseJSONFile(content, path)
+                        : this.parseHTMLFile(content, path);
+
+                    if (!parsedData) continue;
+
+                    // Respect tweets the user dismissed in an earlier session
+                    const key = this.getStableTweetKey(parsedData);
+                    if (key && hiddenKeys.has(key)) {
+                        hiddenCount++;
+                        continue;
                     }
+
+                    const tweet = await this.resolveMediaPaths(parsedData);
+                    tweet.id = `tweet-${this.tweets.length}-${Date.now()}`;
+                    this.tweets.push(tweet);
+                    loadedCount++;
+                    if (isJson) jsonFallbackCount++;
                 } catch (error) {
                     console.error(`Failed to process file ${file.name}:`, error);
                 }
+            }
+
+            if (hiddenCount > 0) {
+                console.log(`[TweetBrowser] Skipped ${hiddenCount} previously dismissed tweet(s)`);
+            }
+
+            if (jsonFallbackCount > 0) {
+                console.log(`[TweetBrowser] Loaded ${jsonFallbackCount} tweet(s) from JSON`);
             }
 
             this.tweets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -251,24 +296,89 @@ class TweetBrowser {
         });
     }
 
-    parseFile(content, filename) {
+    /**
+     * Read text out of a saved tweet's .tweet-text container.
+     *
+     * Uses textContent rather than innerHTML on purpose. innerHTML made
+     * `tweet.text` mean two different things depending on where the tweet came
+     * from — an HTML fragment for HTML files, plain text for JSON — so the
+     * render path could neither escape it consistently nor leave it alone
+     * safely. Reading text keeps one representation everywhere; line breaks
+     * survive because the saved page stores them as real newlines.
+     */
+    readTweetText(element) {
+        if (!element) return '';
+        return (element.textContent || '')
+            .replace(/\r\n?/g, '\n')
+            .replace(/[^\S\n]+/g, ' ')
+            .replace(/[ \t]*\n[ \t]*/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    /**
+     * Parse a tweet saved as JSON into the same shape parseHTMLFile returns.
+     *
+     * The JSON stores the original remote media URLs, but the files on disk sit
+     * beside it as media/image_N.<ext> in the order they appear in the array —
+     * the same numbering the downloader uses. Paths are emitted without an
+     * extension because findFile() already probes the candidate extensions.
+     */
+    parseJSONFile(content, filePath) {
+        let data;
         try {
-            if (filename.endsWith('.json')) {
-                const data = JSON.parse(content);
-                // Prioritize tweet publish time over save time
-                if (data.tweetTime) {
-                    data.timestamp = data.tweetTime; // Use original tweet publish time
-                } else if (!data.timestamp && data.tweetTime) {
-                    data.timestamp = data.tweetTime;
-                }
-                return data;
-            } else if (filename.endsWith('.html')) {
-                return this.parseHTMLFile(content, filename);
-            }
+            data = JSON.parse(content);
         } catch (error) {
-            console.error('Failed to parse file:', filename, error);
+            console.error('Failed to parse JSON file:', filePath, error);
+            return null;
         }
-        return null;
+
+        if (!data || typeof data !== 'object') return null;
+
+        // A thread file holds { tweets: [...] }; treat its first tweet as the
+        // card and keep the rest for the detail view.
+        const isThread = Array.isArray(data.tweets) && data.tweets.length > 0;
+        const primary = isThread ? (data.mainTweet || data.tweets[0]) : data;
+        if (!primary || typeof primary !== 'object') return null;
+
+        const baseDir = filePath.includes('/') ? filePath.substring(0, filePath.lastIndexOf('/')) : '';
+        const localPath = (name) => (baseDir ? `${baseDir}/media/${name}` : `media/${name}`);
+
+        // Thread media is numbered across the whole thread, de-duplicated, so
+        // rebuild that same sequence rather than numbering per tweet.
+        const orderedImages = [];
+        const sources = isThread ? data.tweets : [primary];
+        for (const tweet of sources) {
+            for (const url of (tweet && tweet.media && tweet.media.images) || []) {
+                if (!orderedImages.includes(url)) orderedImages.push(url);
+            }
+        }
+
+        const imagesForPrimary = isThread
+            ? orderedImages
+            : ((primary.media && primary.media.images) || []);
+
+        return {
+            userName: primary.userName || this.getI18nMessage('unknownUser') || 'Unknown User',
+            userHandle: primary.userHandle || '',
+            text: primary.text || '',
+            // Prefer the tweet's own publish time over the time it was saved
+            timestamp: primary.tweetTime || primary.timestamp || null,
+            userAvatarUrl: primary.userAvatar ? localPath('avatar') : '',
+            media: {
+                images: imagesForPrimary.map((url) => localPath(`image_${orderedImages.indexOf(url) + 1}`)),
+                videos: []
+            },
+            stats: {
+                replies: (primary.stats && primary.stats.replies) || '0',
+                retweets: (primary.stats && primary.stats.retweets) || '0',
+                likes: (primary.stats && primary.stats.likes) || '0'
+            },
+            tweetUrl: primary.tweetUrl || '',
+            isThread,
+            threadTweets: isThread ? data.tweets : undefined,
+            url: primary.url || ''
+        };
     }
 
     parseHTMLFile(html, filePath) {
@@ -358,7 +468,7 @@ class TweetBrowser {
                 return {
                     userName: userNameEl ? userNameEl.textContent.trim() : chrome.i18n.getMessage('unknownUser'),
                     userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
-                    text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
+                    text: this.readTweetText(tweetTextEl),
                     timestamp: timestamp,
                     userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
                     media: { 
@@ -462,7 +572,7 @@ class TweetBrowser {
             return {
                 userName: userNameEl ? userNameEl.textContent.trim() : chrome.i18n.getMessage('unknownUser'),
                 userHandle: userHandleEl ? userHandleEl.textContent.replace('@', '').trim() : '',
-                text: tweetTextEl ? tweetTextEl.innerHTML.trim() : '',
+                text: this.readTweetText(tweetTextEl),
                 timestamp: timestamp,
                 userAvatarUrl: avatarImgEl ? getRelativePath(avatarImgEl.getAttribute('src'), filePath) : '',
                 media: { 
@@ -702,11 +812,11 @@ class TweetBrowser {
             const retweets = tweet.stats?.retweets || '0';
 
             const avatarHtml = tweet.displayAvatarUrl
-                ? `<img src="${tweet.displayAvatarUrl}" alt="${userName}'s avatar">`
-                : `<span>${userName.charAt(0).toUpperCase()}</span>`;
+                ? `<img src="${this.escapeHtml(tweet.displayAvatarUrl)}" alt="${this.escapeHtml(userName)}">`
+                : `<span>${this.escapeHtml(userName.charAt(0).toUpperCase())}</span>`;
 
             card.innerHTML = `
-                <button class="delete-btn" data-tweet-id="${tweet.id}">&times;</button>
+                <button class="delete-btn" data-tweet-id="${this.escapeHtml(tweet.id)}">&times;</button>
                 <div class="tweet-user">
                     <div class="user-avatar">
                         ${avatarHtml}
@@ -717,11 +827,11 @@ class TweetBrowser {
                         ${tweet.isThread ? `<span style="background: #1da1f2; color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 2px; display: inline-block;">🧵 Thread (${tweet.threadTweets?.length || 0} tweets)</span>` : ''}
                     </div>
                 </div>
-                <p class="tweet-text">${text}</p>
+                <p class="tweet-text">${this.escapeHtml(text)}</p>
                 <div class="tweet-footer">
-                    <span>❤️ ${likes}</span>
-                    <span>🔁 ${retweets}</span>
-                    <span class="tweet-timestamp">${timestamp}</span>
+                    <span>❤️ ${this.escapeHtml(likes)}</span>
+                    <span>🔁 ${this.escapeHtml(retweets)}</span>
+                    <span class="tweet-timestamp">${this.escapeHtml(timestamp)}</span>
                 </div>
             `;
 
@@ -758,9 +868,62 @@ class TweetBrowser {
     }
 
     escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return escapeHtml(text);
+    }
+
+    /** localStorage key holding the tweets the user has dismissed */
+    static get HIDDEN_STORAGE_KEY() {
+        return 'tweetBrowserHiddenTweets';
+    }
+
+    /**
+     * Stable identity for a tweet, matching TweetMetadataManager's rule so a
+     * dismissal survives a reload. `tweet.id` cannot be used: it is rebuilt as
+     * `tweet-<index>-<now>` on every load and never matches twice.
+     */
+    getStableTweetKey(tweet) {
+        try {
+            return this.getMetadataManager().generateTweetId(tweet);
+        } catch (error) {
+            console.warn('Falling back to local key derivation:', error);
+            const status = (tweet.tweetUrl || '').match(/\/status(?:es)?\/(\d+)/);
+            return status ? status[1] : '';
+        }
+    }
+
+    loadHiddenTweetKeys() {
+        try {
+            const stored = localStorage.getItem(TweetBrowser.HIDDEN_STORAGE_KEY);
+            return new Set(stored ? JSON.parse(stored) : []);
+        } catch (error) {
+            console.error('Failed to load hidden tweets:', error);
+            return new Set();
+        }
+    }
+
+    persistHiddenTweetKeys(keys) {
+        try {
+            localStorage.setItem(TweetBrowser.HIDDEN_STORAGE_KEY, JSON.stringify([...keys]));
+            return true;
+        } catch (error) {
+            console.error('Failed to persist hidden tweets:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Release the object URLs a tweet was holding.
+     *
+     * These were only revoked in clearPreviousData(), so deleting tweets one by
+     * one during a long session leaked a blob URL per image every time.
+     */
+    releaseTweetObjectUrls(tweet) {
+        const urls = [tweet.displayAvatarUrl, ...(tweet.displayImageUrls || [])].filter(Boolean);
+        for (const url of urls) {
+            URL.revokeObjectURL(url);
+            const index = this.objectUrls.indexOf(url);
+            if (index !== -1) this.objectUrls.splice(index, 1);
+        }
     }
 
     deleteTweet(tweetId) {
@@ -774,13 +937,29 @@ class TweetBrowser {
         if (!remainingTweetsFromSource && sourceFileId) {
             this.loadedFileIds.delete(sourceFileId);
         }
-        
+
+        this.releaseTweetObjectUrls(tweetToDelete);
+
+        // Remember the dismissal. The file on disk is deliberately left alone —
+        // the page has no write access to it — but without persisting this the
+        // tweet reappeared on the next folder load while the toast claimed it
+        // had been deleted.
+        let persisted = false;
+        const key = this.getStableTweetKey(tweetToDelete);
+        if (key) {
+            const hidden = this.loadHiddenTweetKeys();
+            hidden.add(key);
+            persisted = this.persistHiddenTweetKeys(hidden);
+        }
+
         // Final data processing flow
         this.updateStats();
         this.applyFilters();
         this.updateReloadMediaButtonVisibility();
-        const deleteText = this.getI18nMessage('notifyTweetDeleted') || 'Tweet deleted';
-        this.showNotification(deleteText);
+
+        this.showNotification(persisted
+            ? (this.getI18nMessage('notifyTweetHidden') || '已从列表移除（本地文件保留）')
+            : (this.getI18nMessage('notifyTweetHiddenSessionOnly') || '已从当前列表移除（重新载入后会再次出现）'));
     }
 
 
@@ -1199,6 +1378,18 @@ class TweetBrowser {
 // Global functions
 let browser;
 
+/**
+ * Escape text before interpolating it into innerHTML.
+ *
+ * Module-level twin of TweetBrowser#escapeHtml, for the detail-view helpers
+ * that live outside the class and therefore have no `this`.
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text === null || text === undefined ? '' : String(text);
+    return div.innerHTML;
+}
+
 function showTweetDetail(index) {
     console.log('Global showTweetDetail called with index:', index);
     
@@ -1262,27 +1453,28 @@ function showTweetDetail(index) {
     
     // Create avatar HTML
     const avatarHtml = tweet.displayAvatarUrl
-        ? `<img src="${tweet.displayAvatarUrl}" alt="${tweet.userName}" class="user-avatar-img">`
-        : `<div class="user-avatar-placeholder">${(tweet.userName || 'U').charAt(0).toUpperCase()}</div>`;
-    
+        ? `<img src="${escapeHtml(tweet.displayAvatarUrl)}" alt="${escapeHtml(tweet.userName)}" class="user-avatar-img">`
+        : `<div class="user-avatar-placeholder">${escapeHtml((tweet.userName || 'U').charAt(0).toUpperCase())}</div>`;
+
     // Populate user info
     modalTweetUser.innerHTML = `
         ${avatarHtml}
         <div class="user-info">
-            <h4>${tweet.userName || 'Unknown User'}</h4>
-            <span class="user-handle">@${tweet.userHandle || 'unknown'}</span>
+            <h4>${escapeHtml(tweet.userName || 'Unknown User')}</h4>
+            <span class="user-handle">@${escapeHtml(tweet.userHandle || 'unknown')}</span>
         </div>
     `;
-    
-    // Populate text
-    modalTweetText.innerHTML = tweet.text || '';
+
+    // Populate text. textContent, not innerHTML: the text is plain now, and
+    // .modal-tweet-text carries white-space: pre-wrap so line breaks render.
+    modalTweetText.textContent = tweet.text || '';
     
     // Populate media
     console.log('Tweet displayImageUrls:', tweet.displayImageUrls);
     console.log('Tweet media.images:', tweet.media?.images);
     
     const imagesHTML = (tweet.displayImageUrls || [])
-        .map(src => `<img src="${src}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
+        .map(src => `<img src="${escapeHtml(src)}" alt="Tweet Image" style="max-width: 100%; border-radius: 12px; margin-top: 10px;">`)
         .join('');
     console.log('Generated imagesHTML:', imagesHTML);
     modalTweetMedia.innerHTML = imagesHTML;

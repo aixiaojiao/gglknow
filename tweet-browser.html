@@ -393,6 +393,11 @@
             -webkit-line-clamp: 6;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            /* Tweets carry real line breaks; without this the card preview
+               collapses a multi-paragraph post into one run-on block. */
+            white-space: pre-wrap;
+            /* Long unbroken URLs would otherwise stretch the card */
+            overflow-wrap: anywhere;
         }
 
         .tweet-meta {
