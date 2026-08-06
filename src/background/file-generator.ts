@@ -114,7 +114,7 @@ function buildThreadMediaPaths(threadData: ThreadData): {
 function buildAttributionFooter(): string {
     if (!hasBranding()) return '';
 
-    let label = '由 GglKnow 保存';
+    let label = '由推文收藏器保存';
     try {
         label = chrome.i18n.getMessage('savedByAttribution') || label;
     } catch {

@@ -1410,7 +1410,7 @@ function renderAttribution() {
     const branding = window.GGLKNOW_BRANDING;
     if (!container || !branding || !branding.handle || !branding.url) return;
 
-    const label = document.createTextNode('由 GglKnow 保存 · ');
+    const label = document.createTextNode('由推文收藏器保存 · ');
     const link = document.createElement('a');
     link.href = branding.url;
     link.target = '_blank';

@@ -2,6 +2,10 @@
 
 ## [2.2.2] - 2026-08-05
 
+### 🏷️ 更名 (Rename)
+- **移除名称中的第三方商标**: 英文名由 `Twitter Tweet Collector` 改为 **Postfolder**，中文名由 `Twitter推文收藏器` 改为 **推文收藏器**。Chrome 应用商店禁止在名称中使用第三方商标造成混淆，这是实际存在的下架风险；描述中陈述兼容性（"适用于 X / Twitter"）属指明性使用，不受影响，搜索词因此没有损失。
+- 同步更新扩展描述、弹窗标题、帮助页与三份文档中的名称。代码内部代号 GglKnow 保持不变。
+
 ### 🐛 重要修复 (Critical Bug Fixes)
 
 #### AI 标签引擎此前从未产生过任何建议 (AI Tag Engine Never Worked)

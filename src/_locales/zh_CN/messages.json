@@ -1,22 +1,22 @@
 {
   "extName": {
-    "message": "Twitter推文收藏器",
+    "message": "推文收藏器",
     "description": "扩展程序的名称。"
   },
   "extDescription": {
-    "message": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
+    "message": "在 X（原 Twitter）的帖子旁添加收藏按钮，一键把正文、图片和作者信息保存为本地文件（HTML / Markdown / JSON）。全部处理在本地完成，不上传任何服务器。",
     "description": "扩展程序的描述。"
   },
   "actionTitle": {
-    "message": "Twitter推文收藏器设置",
+    "message": "推文收藏器设置",
     "description": "浏览器操作的标题，悬停时显示。"
   },
   "popupTitle": {
-    "message": "推文采集器设置",
+    "message": "推文收藏器设置",
     "description": "弹出窗口的标题。"
   },
   "popupHeaderDescription": {
-    "message": "推文收藏器 - 设置",
+    "message": "设置",
     "description": "弹出窗口头部的描述。"
   },
   "connectionChecking": {
@@ -350,7 +350,7 @@
     "description": "Shown when a dismissal could not be saved."
   },
   "savedByAttribution": {
-    "message": "由 GglKnow 保存",
+    "message": "由推文收藏器保存",
     "description": "Attribution line at the foot of a saved tweet page."
   }
 }

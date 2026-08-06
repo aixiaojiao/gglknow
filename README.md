@@ -1,4 +1,4 @@
-# Twitter推文收藏器 Chrome插件
+# 推文收藏器 Chrome插件
 
 一个简单易用的Chrome浏览器插件，用于在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地。
 

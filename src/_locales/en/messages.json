@@ -1,22 +1,22 @@
 {
   "extName": {
-    "message": "Twitter Tweet Collector",
+    "message": "Postfolder",
     "description": "The name of the extension."
   },
   "extDescription": {
-    "message": "Add a collect button next to Twitter/X tweets to save them to a local folder with one click.",
+    "message": "Save posts from X (formerly Twitter) as real files — HTML, Markdown or JSON — into a folder you pick. Everything stays local.",
     "description": "The description of the extension."
   },
   "actionTitle": {
-    "message": "Twitter Tweet Collector Settings",
+    "message": "Postfolder Settings",
     "description": "The title of the browser action, shown on hover."
   },
   "popupTitle": {
-    "message": "Tweet Collector Settings",
+    "message": "Postfolder Settings",
     "description": "Title for the popup window."
   },
   "popupHeaderDescription": {
-    "message": "Tweet Collector - Settings",
+    "message": "Settings",
     "description": "Description in the popup header."
   },
   "connectionChecking": {
@@ -350,7 +350,7 @@
     "description": "Shown when a dismissal could not be saved."
   },
   "savedByAttribution": {
-    "message": "Saved with GglKnow",
+    "message": "Saved with Postfolder",
     "description": "Attribution line at the foot of a saved tweet page."
   }
 }
