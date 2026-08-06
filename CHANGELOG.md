@@ -1,5 +1,57 @@
 # 更新日志
 
+## [2.2.2] - 2026-08-05
+
+### 🏷️ 更名 (Rename)
+- **移除名称中的第三方商标**: 英文名由 `Twitter Tweet Collector` 改为 **Postfolder**，中文名由 `Twitter推文收藏器` 改为 **推文收藏器**。Chrome 应用商店禁止在名称中使用第三方商标造成混淆，这是实际存在的下架风险；描述中陈述兼容性（"适用于 X / Twitter"）属指明性使用，不受影响，搜索词因此没有损失。
+- 同步更新扩展描述、弹窗标题、帮助页与三份文档中的名称。代码内部代号 GglKnow 保持不变。
+
+### 🐛 重要修复 (Critical Bug Fixes)
+
+#### AI 标签引擎此前从未产生过任何建议 (AI Tag Engine Never Worked)
+- **字段名错误导致引擎全盲**: `extractAnalyzableText` 读取 `tweetData.tweetText`，而全项目产生的字段是 `text`（`userBio` 更是完全不存在）。引擎对每条推文分析的都是空字符串，永远返回 0 条建议。`hasLinks`、`isReply` 同样读错字段；`hasMedia` 读 `tweetData.images`，而实际嵌套在 `media.images` 下。
+- **评分公式方向相反**: 置信度按 `命中数 / 规则词表长度` 计算，导致**词表越丰富的规则越难触发**。`tech` 有 14 个关键词，命中 3 个只得 0.257，而阈值是 0.6——`tech` 和 `ai` 这两个最核心的标签结构性地永远无法命中。改为按命中数计分并饱和。
+- **持久化缺兜底**: `saveSettings` / `saveUserPatterns` 没有 try/catch，localStorage 超配额会直接抛出。
+
+实测：同一条推文，修复前建议数 0，修复后为 5（ai 0.90、thread 0.90、tech 0.80、tutorial 0.80、open-source 0.80）。
+
+#### 推文管理器的元数据键、JSON 载入与转义 (Tweet Browser)
+- **标签键生成的三个缺陷**: 回退分支用 `btoa()`，对非 Latin1 输入抛 `InvalidCharacterError`——用户群以中文为主，只要没拿到 `tweetUrl`，打标签就整个中断；主分支用 `split('/').pop()`，URL 以斜杠结尾时返回空字符串，导致所有这类推文共用一个键、标签互相串；`?s=20` 这类参数会让同一条推文分裂成两条记录。改为正则提取 status id + FNV-1a 哈希兜底，并新增一次性迁移把可恢复的旧键折回，空键桶移入 `orphanedTweets` 隔离而非删除。
+- **JSON 格式从未真正被支持**: 载入时只过滤 `.html`，导致唯一处理 JSON 的 `parseFile` 从未被调用，而空状态文案和 popup 都宣称支持 JSON——只勾选 JSON 的用户浏览器永远是空的且无任何报错。现已支持，并按「去扩展名路径」分组避免同一推文重复载入。
+- **正文表示不一致**: `tweet.text` 来源不同含义就不同（HTML 取 `innerHTML`、JSON 取纯文本），渲染层既无法统一转义也无法统一放行。改为载入时归一化为纯文本、渲染时一律转义，并补齐卡片正文、头像 alt、data 属性、弹窗用户名与图片 src 的转义。
+- **卡片预览换行**: 卡片 `.tweet-text` 补 `white-space: pre-wrap`，否则本版恢复的换行在预览里仍会塌成一行。
+- **「删除」是假的**: 此前只从内存移除，重新载入即复活，提示却说「推文已删除」。改为按稳定键持久化并在载入时跳过，文案如实说明本地文件保留。
+- **object URL 泄漏**: `deleteTweet` 不释放该推文的 blob URL，长会话反复删除会逐张累积。
+
+#### 保存内容的排版终于是对的 (Text Formatting)
+- **修复换行全部丢失**: `cleanTextContent` 用 `\s+` 归一化空白，而 `\s` 包含 `\n`，导致**任何多行推文都被压成一整行**。现在只折叠水平空白，换行完整保留。
+- **修复 emoji 被丢弃**: X 把 emoji 渲染成 `<img alt="🎉">`，而 `textContent` 会直接丢掉它们。新增按 DOM 树遍历的提取器，读取 `alt` 还原 emoji，同时处理 `<br>` 和块级边界。
+- **HTML 模板的 `white-space: pre-wrap` 现在真正生效**（此前文本里已无换行可渲染）。
+
+#### HTML 转义 (HTML Escaping)
+- **修复正文未转义**: 生成 HTML 时直接插值推文内容，推文中出现 `<`、`>`、`&` 会破坏页面结构甚至吞掉后续内容；保存的 HTML 在本地打开时还会执行推文里的脚本。现在用户名、正文、链接、媒体路径、页面标题全部转义。
+
+#### 推文串图片路径 (Thread Media Paths)
+- **修复串的 Markdown 图片全是坏链**: Markdown 用每条推文内部的下标生成 `image_N`，而下载器按整串全局递增编号，第二条之后全部错位。现在 HTML 与 Markdown 共用同一张全局路径表。
+- **修复重复图片导致的编号漂移**: 下载器不去重、生成器去重，同一张图出现在多条推文时两边编号会岔开。下载侧改为按顺序去重，与生成器一致。
+
+#### 用户信息提取 (User Info)
+- **修复失效的选择器**: 代码首选 `[data-testid="User-Names"]`（复数），在当前 X 上匹配数为 0，一直在回退到极宽松的 `div[dir="ltr"] span`。改用实际存在的 `[data-testid="User-Name"]`，按 `@` 前缀区分昵称与 handle。
+- **修复 handle 可能取到推文 ID**: 回退逻辑 `href.replace(/^.*\//, '')` 对 `/user/status/123` 会得到 `123`，改为锚定首个路径段。
+
+### 🔒 平台合规 (Platform Safety)
+- **收紧唯一一处程序化点击**: 展开长文时原先遍历推文内所有按钮，只要文案含 `show`/`more`/`更多`/`展开` 就点击，会误中「Show more replies」和推文的更多菜单。现在只匹配 X 官方的 `data-testid="tweet-text-show-more-link"`，且要求文案完整命中白名单。
+- 扩展仍然保持零联网、零 API 调用、零互动自动化：全部数据来自页面 DOM，全部保存动作由用户点击触发。
+
+### ✨ 格式优化 (Format Improvements)
+- **Markdown 增加 YAML front matter**（author / handle / date / source / saved / tags），可直接入 Obsidian 库。
+- **Markdown 引用块逐行加前缀**，多行推文不再从引用块里跑出去。
+- 串的 Markdown 末尾不再多出一条分隔线；图片改用简洁的 `![](media/image_N.jpg)`。
+
+### 🧹 清理 (Cleanup)
+- **移除写死的调试规则**: 正文清洗里硬编码了某个具体用户的 handle，以及一组从某条期权推文里抠出来的分段关键词（`初始状态：`/`溢价压缩是预警`/`数学本质` 等），这些规则对其他推文只会在错误位置插入换行。段落结构现在直接来自 DOM，不再靠关键词猜。
+- 移除会误伤正文的 `<[^>]*>` 剥离规则（会破坏 `a<b` 这类文本）。
+
 ## [2.2.1] - 2025-09-06
 
 ### 🐛 重要修复 (Critical Bug Fixes)

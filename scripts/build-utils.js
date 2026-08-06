@@ -56,6 +56,29 @@ function copyFile(src, dest) {
   console.log(`Copied: ${src} -> ${dest}`);
 }
 
+// 从 src/config/branding.json 生成给纯 JS 页面使用的 branding.js
+function generateBrandingScript(distPath) {
+  const source = path.join(projectRoot, 'src/config/branding.json');
+
+  if (!fs.existsSync(source)) {
+    console.warn(`Branding config missing, skipping: ${source}`);
+    return;
+  }
+
+  const branding = JSON.parse(fs.readFileSync(source, 'utf8'));
+  const payload = {
+    handle: branding.handle || '',
+    url: branding.url || '',
+    links: branding.links || []
+  };
+
+  const contents = `/* Generated from src/config/branding.json — do not edit by hand. */\n`
+    + `window.GGLKNOW_BRANDING = ${JSON.stringify(payload, null, 2)};\n`;
+
+  fs.writeFileSync(path.join(distPath, 'branding.js'), contents);
+  console.log(`Generated: ${path.join(distPath, 'branding.js')}`);
+}
+
 // 获取版本号
 function getVersion() {
   const packageJsonPath = path.join(projectRoot, 'package.json');
@@ -88,6 +111,11 @@ switch (command) {
     copyFile(path.join(projectRoot, 'ai-tag-engine.js'), path.join(distPath, 'ai-tag-engine.js'));
     copyFile(path.join(projectRoot, 'tweet-metadata-manager.js'), path.join(distPath, 'tweet-metadata-manager.js'));
     copyFile(path.join(projectRoot, 'help.html'), path.join(distPath, 'help.html'));
+
+    // Emit branding.js from the same JSON the bundled TypeScript imports, so
+    // the plain-JS pages (tweet browser) read one source of truth rather than
+    // carrying a second copy of the handle that could drift out of sync.
+    generateBrandingScript(distPath);
     
     // 复制目录
     copyDir(path.join(projectRoot, 'icons'), path.join(distPath, 'icons'));

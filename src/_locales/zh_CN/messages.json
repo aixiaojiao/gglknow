@@ -1,22 +1,22 @@
 {
   "extName": {
-    "message": "Twitter推文收藏器",
+    "message": "推文收藏器",
     "description": "扩展程序的名称。"
   },
   "extDescription": {
-    "message": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
+    "message": "在 X（原 Twitter）的帖子旁添加收藏按钮，一键把正文、图片和作者信息保存为本地文件（HTML / Markdown / JSON）。全部处理在本地完成，不上传任何服务器。",
     "description": "扩展程序的描述。"
   },
   "actionTitle": {
-    "message": "Twitter推文收藏器设置",
+    "message": "推文收藏器设置",
     "description": "浏览器操作的标题，悬停时显示。"
   },
   "popupTitle": {
-    "message": "推文采集器设置",
+    "message": "推文收藏器设置",
     "description": "弹出窗口的标题。"
   },
   "popupHeaderDescription": {
-    "message": "推文收藏器 - 设置",
+    "message": "设置",
     "description": "弹出窗口头部的描述。"
   },
   "connectionChecking": {
@@ -340,5 +340,17 @@
   "tweetBrowserModalViewOriginal": {
     "message": "🔗 查看原始推文",
     "description": "查看原始推文的链接文本。"
+  },
+  "notifyTweetHidden": {
+    "message": "已从列表移除，本地文件保留不变。",
+    "description": "Shown when a tweet is dismissed and the dismissal was persisted."
+  },
+  "notifyTweetHiddenSessionOnly": {
+    "message": "仅从当前视图移除——重新载入文件夹后会再次出现。",
+    "description": "Shown when a dismissal could not be saved."
+  },
+  "savedByAttribution": {
+    "message": "由推文收藏器保存",
+    "description": "Attribution line at the foot of a saved tweet page."
   }
-} 
+}

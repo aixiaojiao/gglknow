@@ -384,6 +384,22 @@
             color: var(--text-muted);
         }
 
+        .attribution {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted, #8b98a5);
+            padding: 24px 0 32px;
+        }
+
+        .attribution a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .attribution a:hover {
+            text-decoration: underline;
+        }
+
         .tweet-text {
             font-size: 15px;
             line-height: 1.6;
@@ -393,6 +409,11 @@
             -webkit-line-clamp: 6;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            /* Tweets carry real line breaks; without this the card preview
+               collapses a multi-paragraph post into one run-on block. */
+            white-space: pre-wrap;
+            /* Long unbroken URLs would otherwise stretch the card */
+            overflow-wrap: anywhere;
         }
 
         .tweet-meta {
@@ -1267,6 +1288,14 @@
         </div>
     </div>
     
+    <!-- Author attribution. Populated from src/config/branding.json; stays
+         empty (and invisible) when branding is unconfigured. -->
+    <div class="attribution" id="attribution"></div>
+
+    <!-- Generated at build time from src/config/branding.json. Absent when
+         running this page straight from the repo, which is fine — the
+         attribution simply does not render. -->
+    <script src="branding.js"></script>
     <script src="ai-tag-engine.js"></script>
     <script src="tweet-metadata-manager.js"></script>
     <script src="tweet-browser.js"></script>

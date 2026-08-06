@@ -19,7 +19,7 @@ class TweetMetadataManager {
     loadMetadata() {
         try {
             const stored = localStorage.getItem(this.storageKey);
-            return stored ? JSON.parse(stored) : {
+            return stored ? this.migrateMetadata(JSON.parse(stored)) : {
                 tweets: {}, // tweetId -> { tags: [], collection: '', notes: '', favorite: false }
                 collections: {
                     'favorites': { name: '⭐ Favorites', tweets: [] },
@@ -40,14 +40,119 @@ class TweetMetadataManager {
     }
 
     /**
+     * Repair metadata keys written by older versions.
+     *
+     * Keys used to come from `tweetUrl.split('/').pop()`, which kept any query
+     * string attached ("123?s=20") and produced an empty string for URLs ending
+     * in a slash. Fold the recoverable ones back onto the plain status id so
+     * existing tags survive; quarantine rather than delete the rest.
+     */
+    migrateMetadata(metadata) {
+        if (!metadata || typeof metadata !== 'object') return metadata;
+        if (metadata.schemaVersion >= 2) return metadata;
+
+        const tweets = metadata.tweets || {};
+        const repaired = {};
+        const orphaned = {};
+        let mergedCount = 0;
+
+        for (const [key, value] of Object.entries(tweets)) {
+            // The empty key was a collision bucket holding tags from many
+            // different tweets at once. There is no way to tell them apart, so
+            // set it aside instead of silently mis-attributing it to one tweet.
+            if (!key) {
+                orphaned[''] = value;
+                continue;
+            }
+
+            const match = key.match(/^(\d+)(?:[?#].*)?$/);
+            const target = match ? match[1] : key;
+
+            if (repaired[target]) {
+                repaired[target] = this.mergeMetadataEntries(repaired[target], value);
+                mergedCount++;
+            } else {
+                repaired[target] = value;
+            }
+        }
+
+        metadata.tweets = repaired;
+        if (Object.keys(orphaned).length > 0) {
+            metadata.orphanedTweets = orphaned;
+        }
+        metadata.schemaVersion = 2;
+
+        console.log('[MetadataManager] Migrated metadata keys to schema 2', {
+            entries: Object.keys(repaired).length,
+            merged: mergedCount,
+            quarantined: Object.keys(orphaned).length
+        });
+
+        return metadata;
+    }
+
+    /**
+     * Combine two metadata records that turned out to describe the same tweet
+     */
+    mergeMetadataEntries(a, b) {
+        return {
+            tags: [...new Set([...(a.tags || []), ...(b.tags || [])])],
+            collection: a.collection || b.collection || '',
+            notes: [a.notes, b.notes].filter(Boolean).join('\n') || '',
+            favorite: Boolean(a.favorite || b.favorite),
+            created: a.created || b.created || new Date().toISOString()
+        };
+    }
+
+    /**
      * Save metadata to Chrome storage
+     *
+     * Returns false when the write failed. localStorage is capped at ~5MB and
+     * throws QuotaExceededError once tags/notes accumulate past it; swallowing
+     * that silently used to lose the user's tag with only a console line.
      */
     saveMetadata() {
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.metadata));
             this.notifyDataChange();
+            return true;
         } catch (error) {
             console.error('Error saving metadata:', error);
+
+            const isQuota = error && (
+                error.name === 'QuotaExceededError' ||
+                error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+                error.code === 22
+            );
+
+            this.notifySaveFailure(isQuota
+                ? '存储空间已满，标签未能保存。请先导出备份再清理部分数据。'
+                : '标签保存失败，请重试。');
+
+            return false;
+        }
+    }
+
+    /**
+     * Surface a save failure to the user rather than only to the console
+     */
+    notifySaveFailure(message) {
+        try {
+            if (typeof window !== 'undefined' && typeof window.showNotification === 'function') {
+                window.showNotification(message);
+                return;
+            }
+            if (typeof document !== 'undefined') {
+                const area = document.getElementById('notificationArea');
+                if (area) {
+                    area.textContent = message;
+                    area.style.display = 'block';
+                    return;
+                }
+            }
+            if (typeof alert === 'function') alert(message);
+        } catch (error) {
+            console.error('Failed to surface save failure:', error);
         }
     }
 
@@ -55,14 +160,44 @@ class TweetMetadataManager {
      * Generate unique tweet ID from tweet data
      */
     generateTweetId(tweetData) {
-        // Use URL if available, otherwise create hash from content
-        if (tweetData.tweetUrl) {
-            return tweetData.tweetUrl.split('/').pop();
+        const url = (tweetData && tweetData.tweetUrl) || '';
+
+        // Pull the numeric status id out of the URL rather than taking the last
+        // path segment. `split('/').pop()` kept tracking params ("123?s=20",
+        // which then never matched the same tweet saved without them) and
+        // returned an empty string for URLs ending in a slash — and an empty
+        // key silently merged every such tweet's tags into one bucket.
+        const status = url.match(/\/status(?:es)?\/(\d+)/);
+        if (status) {
+            return status[1];
         }
-        
-        // Create simple hash from user and timestamp
-        const content = `${tweetData.userName}_${tweetData.userHandle}_${tweetData.timestamp}`;
-        return btoa(content).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+
+        // Fall back to a hash of the identifying fields. This used btoa(),
+        // which throws InvalidCharacterError on anything outside Latin1 — so
+        // every tweet from a user with a CJK or emoji display name aborted the
+        // whole tagging operation instead of getting an id.
+        const content = [
+            (tweetData && tweetData.userName) || '',
+            (tweetData && tweetData.userHandle) || '',
+            (tweetData && tweetData.timestamp) || ''
+        ].join('_');
+
+        return `h${this.hashString(content)}`;
+    }
+
+    /**
+     * FNV-1a over UTF-16 code units.
+     *
+     * Deterministic, ASCII-safe output, and total — it cannot throw on any
+     * input, which is the property the previous btoa() call lacked.
+     */
+    hashString(input) {
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < input.length; i++) {
+            hash ^= input.charCodeAt(i);
+            hash = Math.imul(hash, 0x01000193) >>> 0;
+        }
+        return hash.toString(36);
     }
 
     /**
