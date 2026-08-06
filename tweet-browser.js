@@ -1385,9 +1385,17 @@ let browser;
  * that live outside the class and therefore have no `this`.
  */
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text === null || text === undefined ? '' : String(text);
-    return div.innerHTML;
+    // Plain string replacement rather than the textContent/innerHTML trick.
+    // That trick escapes &, < and > but leaves quotes untouched, because they
+    // are not special inside text content — yet this value also gets
+    // interpolated into attributes (alt="…", src="…", data-tweet-id="…"),
+    // where an unescaped quote breaks straight out of the attribute.
+    return String(text === null || text === undefined ? '' : text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
