@@ -55,6 +55,13 @@ export interface TweetData {
   userAvatar: string;
   /** Tweet text content (may contain HTML) */
   text: string;
+  /** Ordered, sanitized rich content captured from the loaded DOM. */
+  contentHtml?: string;
+  contentMarkdown?: string;
+  title?: string;
+  contentKind?: 'tweet' | 'article';
+  captureScope?: 'loaded-page';
+  tags?: string[];
   /** Tweet timestamp (ISO string) */
   timestamp: string;
   /** Tweet's original posting time */
@@ -413,4 +420,4 @@ export default {
   DEFAULT_SETTINGS,
   isLegacyMessage,
   isExtensionMessage
-}; 
+};

@@ -265,7 +265,7 @@ export function createThreadCollectionButton(
     const collectBtn = document.createElement('div');
     collectBtn.className = 'twitter-collector-thread-btn';
     collectBtn.innerHTML = `
-      <div class="collect-button thread-button" title="收藏推文串">
+      <div class="collect-button thread-button" title="保存本页已加载的推文（不会自动翻页）">
         ${ICONS.thread}
         <span class="collect-text">${BUTTON_TEXT.thread}</span>
       </div>
@@ -387,17 +387,9 @@ export function addCollectionButtons(
   container: Element,
   onCollect: (tweetElement: Element, buttonElement: Element) => void
 ): void {
-  const tweetSelectors = [
-    'article[data-testid="tweet"]',
-    '[data-testid="tweet"]'
-  ];
-
-  for (const selector of tweetSelectors) {
-    const tweets = container.querySelectorAll(selector);
-    for (const tweet of tweets) {
-      createCollectionButton(tweet, onCollect);
-    }
-  }
+  const tweets = new Set<Element>(container.querySelectorAll('[data-testid="tweet"]'));
+  if (container.matches('[data-testid="tweet"]')) tweets.add(container);
+  tweets.forEach(tweet => createCollectionButton(tweet, onCollect));
 }
 
 /**
@@ -428,47 +420,37 @@ export function isElementVisible(element: Element): boolean {
  * Observe DOM changes and add buttons to new tweets
  */
 export function observeNewTweets(
-  onCollect: (tweetElement: Element, buttonElement: Element) => void
+  onCollect: (tweetElement: Element, buttonElement: Element) => void,
+  onThread?: (tweetElement: Element, buttonElement: Element) => void
 ): MutationObserver {
-  let debounceTimer: number | null = null;
-  
-  const observer = new MutationObserver((mutations) => {
-    // Debounce to avoid excessive processing
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
+  const pending = new Set<Element>();
+  let timer: number | undefined;
+  const flush = () => {
+    timer = undefined;
+    const roots = [...pending]; pending.clear();
+    for (const tweet of roots) {
+      if (!tweet.isConnected) continue;
+      createCollectionButton(tweet, onCollect);
+      const statusId = location.pathname.match(/\/status\/(\d+)/)?.[1];
+      if (onThread && statusId && tweet.querySelector(`a[href$="/status/${statusId}"]`)) createThreadCollectionButton(tweet, onThread);
     }
-    
-    debounceTimer = window.setTimeout(() => {
-      let hasRelevantChanges = false;
-      
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as Element;
-              // Only process if it contains tweet elements or is a tweet itself
-              if (element.matches('article[data-testid="tweet"]') || 
-                  element.querySelector('article[data-testid="tweet"]')) {
-                hasRelevantChanges = true;
-                addCollectionButtons(element, onCollect);
-              }
-            }
-          }
-        }
+  };
+  const observer = new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      if (!(mutation.target instanceof Element) || mutation.target.closest('.twitter-collector-btn,.twitter-collector-thread-btn')) continue;
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof Element) || node.matches('.twitter-collector-btn,.twitter-collector-thread-btn')) continue;
+        const parent = node.closest('[data-testid="tweet"]');
+        if (parent) pending.add(parent);
+        else node.querySelectorAll('[data-testid="tweet"]').forEach(tweet => pending.add(tweet));
       }
-      
-      if (hasRelevantChanges) {
-        log('info', 'UIManager', 'Processing new tweets');
-      }
-    }, 100); // 100ms debounce
+    }
+    // Do not reset on every mutation: a busy timeline must not starve collection.
+    if (pending.size && timer === undefined) timer = window.setTimeout(flush, 150);
   });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  log('info', 'UIManager', 'DOM observer started with debouncing');
+  observer.observe(document.body, {childList:true,subtree:true});
+  const disconnect = observer.disconnect.bind(observer);
+  observer.disconnect = () => { disconnect(); if (timer !== undefined) clearTimeout(timer); pending.clear(); };
   return observer;
 }
 

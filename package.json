@@ -1,12 +1,12 @@
 {
   "name": "gglknow",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "A Chrome extension to save tweets locally.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "npm run build:all",
-    "build:all": "npm run clean && tsc && vite build && npm run build:sw && npm run build:popup && npm run build:content && npm run copy:assets",
+    "build:all": "npm run clean && tsc && vite build && npm run build:sw && npm run build:popup && npm run build:content && npm run build:reader && npm run copy:assets",
     "clean": "node scripts/build-utils.js clean",
     "build:sw": "rollup -c rollup.sw.config.js",
     "build:popup": "rollup -c rollup.popup.config.js",
@@ -16,13 +16,16 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "build:reader": "rollup -c rollup.reader.config.js"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "29.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.11.17",
+    "@types/turndown": "5.0.6",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",
@@ -43,5 +46,10 @@
     "browser"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@tabler/core": "1.6.1",
+    "dompurify": "3.4.17",
+    "turndown": "7.2.4"
+  }
 }

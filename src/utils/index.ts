@@ -39,7 +39,9 @@ export function getFileExtension(url: string): string {
   if (!url) return '';
   
   try {
-    const urlObj = new URL(url);
+    const urlObj = new URL(url, 'https://local.invalid/');
+    const format = urlObj.searchParams.get('format')?.toLowerCase();
+    if (format && ['jpg','jpeg','png','gif','webp'].includes(format)) return '.' + format;
     const pathname = urlObj.pathname;
     const lastDot = pathname.lastIndexOf('.');
     

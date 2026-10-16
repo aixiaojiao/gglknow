@@ -27,7 +27,7 @@ export function isThreadPage(): boolean {
 }
 
 /**
- * Extracts the complete thread data from the page.
+ * Extracts only the contiguous, already loaded posts by this author.
  */
 export async function extractThreadData(mainTweetElement: Element): Promise<ThreadData | null> {
   try {
@@ -61,9 +61,12 @@ export async function extractThreadData(mainTweetElement: Element): Promise<Thre
       }
 
       if (threadStarted) {
+        const authorLink = tweetElement.querySelector<HTMLAnchorElement>('[data-testid="User-Name"] a[href], [data-testid="User-Names"] a[href]');
+        if (authorLink && new URL(authorLink.href).pathname.split('/')[1] !== authorHandle) break;
         const currentTweetData = extractTweetData(tweetElement);
         // Once thread starts, check if the author is the same
         if (currentTweetData.userHandle === authorHandle) {
+          if (threadTweets.length >= 25) throw new Error('单次最多保存 25 条已加载推文，请缩小范围。');
           threadTweets.push(currentTweetData);
           log('info', 'ThreadExtractor', `Found tweet by @${authorHandle} in thread.`);
         } else {
@@ -93,6 +96,6 @@ export async function extractThreadData(mainTweetElement: Element): Promise<Thre
     return threadData;
   } catch (error) {
     log('error', 'ThreadExtractor', 'Failed to extract thread data', error);
-    return null;
+    throw error;
   }
 } 

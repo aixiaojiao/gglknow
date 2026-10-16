@@ -73,7 +73,8 @@ class TwitterCollector {
   /**
    * Start the collector
    */
-  private startCollector(): void {
+  public startCollector(): void {
+    if (this.isInitialized) return;
     try {
       log('info', 'TwitterCollector', 'Starting Twitter collector');
 
@@ -84,7 +85,7 @@ class TwitterCollector {
       this.addCollectionButtonsToPage();
 
       // Start observing for new tweets
-      this.observer = observeNewTweets(this.handleCollectTweet.bind(this));
+      this.observer = observeNewTweets(this.handleCollectTweet.bind(this), this.handleCollectThread.bind(this));
 
       // Notify background that content script is loaded
       this.notifyBackgroundLoaded();
@@ -258,6 +259,7 @@ class TwitterCollector {
    * Get short error message for UI display
    */
   private getShortErrorMessage(errorMessage: string): string {
+    if (/请先手动|请先打开|单次最多|正在保存|请间隔|当前页面/.test(errorMessage)) return errorMessage.split(' / ')[0];
     // Check if context is still valid before using chrome.i18n
     const contextValid = checkExtensionContext();
     
@@ -327,28 +329,7 @@ class TwitterCollector {
 // Initialize collector
 const collector = new TwitterCollector();
 
-// Handle page navigation (for SPAs like Twitter)
-let currentUrl = location.href;
-const urlObserver = new MutationObserver(() => {
-  if (location.href !== currentUrl) {
-    currentUrl = location.href;
-    log('info', 'TwitterCollector', 'URL changed, reinitializing', { newUrl: currentUrl });
-    
-    // Cleanup and reinitialize
-    collector.cleanup();
-    setTimeout(() => {
-      new TwitterCollector();
-    }, 1000);
-  }
-});
-
-urlObserver.observe(document, { subtree: true, childList: true });
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-  collector.cleanup();
-  urlObserver.disconnect();
-});
-
-// Export for testing
-export { TwitterCollector }; 
+// One collector survives SPA navigation; the observer handles only changed tweet roots.
+window.addEventListener('pagehide', () => collector.cleanup());
+window.addEventListener('pageshow', event => { if (event.persisted) collector.startCollector(); });
+export { TwitterCollector };
