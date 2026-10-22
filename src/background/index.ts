@@ -29,6 +29,19 @@ import { getSettings, saveSettings } from './settings';
 import { generateFile, generateFileForThread } from './file-generator';
 import { downloadMediaFiles, downloadTweetFile } from './media-downloader';
 
+// A session-persisted cooldown plus a process mutex prevents parallel saves across tabs.
+let collectionBusy = false;
+async function limitedCollection(work: () => Promise<CollectTweetResponse>): Promise<CollectTweetResponse> {
+  if (collectionBusy) return {success:false,error:'正在保存，请完成后再试 / A save is already in progress.'};
+  collectionBusy = true;
+  try {
+    const {nextCollectionAt = 0} = await chrome.storage.session.get('nextCollectionAt');
+    if (Date.now() < nextCollectionAt) return {success:false,error:'请间隔 5 秒再收藏 / Wait 5 seconds between saves.'};
+    await chrome.storage.session.set({nextCollectionAt:Date.now()+5000});
+    return await work();
+  } finally { collectionBusy = false; }
+}
+
 // Service Worker 生命周期事件
 chrome.runtime.onInstalled.addListener((details) => {
   log('info', 'ServiceWorker', 'Extension installed', { reason: details.reason });
@@ -73,7 +86,7 @@ async function handleLegacyMessage(
 ): Promise<void> {
   try {
     if (message.action === 'collectTweet') {
-      const result = await handleCollectTweet(message.tweetData);
+      const result = await limitedCollection(() => handleCollectTweet(message.tweetData));
       sendResponse(result);
     } else {
       sendResponse({ success: false, error: 'Unknown legacy action' });
@@ -99,14 +112,14 @@ async function handleExtensionMessage(
     switch (message.type) {
       case MessageType.COLLECT_TWEET: {
         const collectMessage = message as CollectTweetMessage;
-        const result = await handleCollectTweet(collectMessage.tweetData);
+        const result = await limitedCollection(() => handleCollectTweet(collectMessage.tweetData));
         sendResponse(result);
         break;
       }
 
       case MessageType.COLLECT_THREAD: {
         const collectThreadMessage = message as CollectThreadMessage;
-        const threadResult = await handleCollectThread(collectThreadMessage.threadData);
+        const threadResult = await limitedCollection(() => handleCollectThread(collectThreadMessage.threadData));
         sendResponse(threadResult);
         break;
       }
@@ -154,10 +167,11 @@ async function handleExtensionMessage(
  */
 async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetResponse> {
   try {
+    if ((tweetData?.media?.images?.length || 0) > 50) throw new Error('单次最多保存 50 张图片');
     log('info', 'ServiceWorker', 'Starting tweet collection', {
       user: tweetData.userName,
       hasText: !!tweetData.text,
-      hasMedia: tweetData.media.images.length > 0
+      hasMedia: (tweetData.media?.images?.length || 0) > 0
     });
 
     // Validate tweet data
@@ -180,7 +194,7 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
 
     // Generate and download file for each selected format
     for (const format of settings.fileFormats) {
-      const fileResult = await generateFile(tweetData, format);
+      const fileResult = await generateFile(tweetData, format, settings.downloadMedia);
       log('info', 'ServiceWorker', `File content generated for ${format}`, { 
         size: fileResult.content.length,
         extension: fileResult.extension 
@@ -197,11 +211,12 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
     }
 
     let mediaCount = 0;
+    let mediaIncomplete = false;
 
     // Download media files if enabled
     if (settings.downloadMedia) {
       const mediaToDownload: MediaToDownload = {
-        images: tweetData.media?.images || [],
+        images: [...new Set(tweetData.media?.images || [])],
         videos: tweetData.media?.videos || [],
         avatar: tweetData.userAvatar || null
       };
@@ -219,7 +234,7 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
           log('info', 'ServiceWorker', 'Media download completed', { mediaCount });
         } catch (mediaError) {
           log('warn', 'ServiceWorker', 'Media download failed, but tweet saved', mediaError);
-          // Don't throw error here, tweet is already saved
+          mediaIncomplete = true;
         }
       }
     }
@@ -231,7 +246,7 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
 
     return {
       success: true,
-      message: '推文收藏成功',
+      message: mediaIncomplete ? '正文已保存，部分图片下载失败' : '推文收藏成功',
       filename,
       mediaCount
     };
@@ -250,6 +265,8 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
  */
 async function handleCollectThread(threadData: ThreadData): Promise<CollectTweetResponse> {
   try {
+    if (!Array.isArray(threadData?.tweets) || threadData.tweets.length > 25) throw new Error('单次最多保存 25 条已加载推文');
+    if (new Set(threadData.tweets.flatMap(t => t.media?.images || [])).size > 50) throw new Error('单次最多保存 50 张图片');
     const mainTweet = threadData.mainTweet || threadData.tweets[0];
     if (!mainTweet) {
       throw createError(ExtensionError.INVALID_TWEET_DATA, '线程数据为空或无效');
@@ -264,7 +281,7 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
     const baseFilename = `${generateTweetFilename(mainTweet)}_thread`;
 
     for (const format of settings.fileFormats) {
-      const fileResult = await generateFileForThread(threadData, format);
+      const fileResult = await generateFileForThread(threadData, format, settings.downloadMedia);
       
       await downloadTweetFile(
         baseFilename, // Use consistent base filename
@@ -276,6 +293,7 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
     }
 
     let totalMediaCount = 0;
+    let mediaIncomplete = false;
     if (settings.downloadMedia) {
       const allMedia: MediaToDownload = { images: [], videos: [], avatar: null };
       
@@ -287,18 +305,20 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
         }
       });
       
+      allMedia.images = [...new Set(allMedia.images)];
       totalMediaCount = allMedia.images.length + allMedia.videos.length + (allMedia.avatar ? 1 : 0);
 
       if (totalMediaCount > 0) {
         log('info', 'ServiceWorker', 'Starting media download for thread', { totalMediaCount });
-        await downloadMediaFiles(allMedia, settings.savePath, baseFilename);
+        try { await downloadMediaFiles(allMedia, settings.savePath, baseFilename); }
+        catch { mediaIncomplete = true; totalMediaCount = 0; }
         log('info', 'ServiceWorker', 'Media download for thread completed', { totalMediaCount });
       }
     }
     
     return {
       success: true,
-      message: '推文串收藏成功',
+      message: mediaIncomplete ? '正文已保存，部分图片下载失败' : '已保存本页已加载推文（不保证串完整）',
       filename: baseFilename,
       mediaCount: totalMediaCount
     };

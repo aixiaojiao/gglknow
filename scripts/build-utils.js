@@ -84,11 +84,15 @@ switch (command) {
     copyFile(path.join(projectRoot, 'manifest.json'), path.join(distPath, 'manifest.json'));
     copyFile(path.join(projectRoot, 'styles.css'), path.join(distPath, 'styles.css'));
     copyFile(path.join(projectRoot, 'tweet-browser.html'), path.join(distPath, 'tweet-browser.html'));
-    copyFile(path.join(projectRoot, 'tweet-browser.js'), path.join(distPath, 'tweet-browser.js'));
-    copyFile(path.join(projectRoot, 'ai-tag-engine.js'), path.join(distPath, 'ai-tag-engine.js'));
-    copyFile(path.join(projectRoot, 'tweet-metadata-manager.js'), path.join(distPath, 'tweet-metadata-manager.js'));
     copyFile(path.join(projectRoot, 'help.html'), path.join(distPath, 'help.html'));
     
+    copyFile(path.join(projectRoot, 'reader.css'), path.join(distPath, 'reader.css'));
+    copyFile(path.join(projectRoot, 'node_modules/@tabler/core/dist/css/tabler.min.css'), path.join(distPath, 'vendor/tabler.min.css'));
+    copyFile(path.join(projectRoot, 'licenses/TABLER-LICENSE'), path.join(distPath, 'vendor/TABLER-LICENSE'));
+
+    copyFile(path.join(projectRoot, 'node_modules/turndown/LICENSE'), path.join(distPath, 'vendor/TURNDOWN-LICENSE'));
+    copyFile(path.join(projectRoot, 'node_modules/dompurify/LICENSE'), path.join(distPath, 'vendor/DOMPURIFY-LICENSE'));
+
     // 复制目录
     copyDir(path.join(projectRoot, 'icons'), path.join(distPath, 'icons'));
     copyDir(path.join(projectRoot, 'src/_locales'), path.join(distPath, '_locales'));
@@ -98,13 +102,14 @@ switch (command) {
     break;
     
   case 'zip':
-    // 使用tar命令创建压缩包（跨平台兼容）
+    // Create a genuine ZIP; remove the previous generated archive to avoid stale entries.
     const version = getVersion();
-    const { execSync } = await import('child_process');
-    const archiveName = `gglknow-v${version}-release.tar.gz`;
+    const { execFileSync } = await import('child_process');
+    const archiveName = `gglknow-v${version}-release.zip`;
     
     try {
-      execSync(`tar -czf ${archiveName} -C dist .`, { cwd: projectRoot });
+      fs.rmSync(path.join(projectRoot, archiveName), {force:true});
+      execFileSync('zip', ['-r', path.join(projectRoot, archiveName), '.'], { cwd: path.join(projectRoot, 'dist') });
       console.log(`Created archive: ${archiveName}`);
     } catch (error) {
       console.error('Failed to create archive:', error.message);

@@ -21,7 +21,7 @@ export async function downloadMediaFiles(
       hasAvatar: !!mediaData.avatar
     });
 
-    const downloadPromises: Promise<void>[] = [];
+    const downloadTasks: (() => Promise<void>)[] = [];
 
     // Download images
     mediaData.images.forEach((imageUrl, index) => {
@@ -29,8 +29,8 @@ export async function downloadMediaFiles(
       const filename = `image_${index + 1}${extension}`;
       const fullPath = joinPath(savePath, baseFileName, 'media', filename);
       
-      downloadPromises.push(
-        downloadFile(imageUrl, fullPath, `图片 ${index + 1}`)
+      downloadTasks.push(
+        () => downloadFile(imageUrl, fullPath, `图片 ${index + 1}`)
       );
     });
 
@@ -42,13 +42,17 @@ export async function downloadMediaFiles(
       const filename = `avatar${extension}`;
       const fullPath = joinPath(savePath, baseFileName, 'media', filename);
       
-      downloadPromises.push(
-        downloadFile(mediaData.avatar, fullPath, '头像')
+      downloadTasks.push(
+        () => downloadFile(mediaData.avatar!, fullPath, '头像')
       );
     }
 
     // Wait for all downloads to complete
-    await Promise.all(downloadPromises);
+    for (let i = 0; i < downloadTasks.length; i += 2) {
+      const results = await Promise.allSettled(downloadTasks.slice(i, i + 2).map(task => task()));
+      const failed = results.find(result => result.status === 'rejected');
+      if (failed?.status === 'rejected') throw failed.reason;
+    }
 
     log('info', 'MediaDownloader', 'All media downloads completed successfully');
   } catch (error) {
@@ -65,10 +69,12 @@ export async function downloadMediaFiles(
 /**
  * Download a single file
  */
-async function downloadFile(url: string, filepath: string, description: string): Promise<void> {
+async function downloadFile(url: string, filepath: string, description: string, generated = false): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      log('info', 'MediaDownloader', `Starting download: ${description}`, { url, filepath });
+      const source = new URL(url);
+      if (generated ? !/^data:(text\/(html|markdown|plain)|application\/json);base64,/.test(url) : source.protocol !== 'https:' || source.hostname !== 'pbs.twimg.com') throw new Error('Unsupported download source');
+      log('info', 'MediaDownloader', `Starting download: ${description}`, { url: generated ? '[generated local file]' : url, filepath });
 
       chrome.downloads.download({
         url: url,
@@ -95,10 +101,12 @@ async function downloadFile(url: string, filepath: string, description: string):
             if (delta.state.current === 'complete') {
               log('info', 'MediaDownloader', `Download completed: ${description}`, { downloadId });
               chrome.downloads.onChanged.removeListener(listener);
+              clearTimeout(timeout);
               resolve();
             } else if (delta.state.current === 'interrupted') {
               log('error', 'MediaDownloader', `Download interrupted: ${description}`, { downloadId });
               chrome.downloads.onChanged.removeListener(listener);
+              clearTimeout(timeout);
               reject(new Error(`Download interrupted: ${description}`));
             }
           }
@@ -107,8 +115,9 @@ async function downloadFile(url: string, filepath: string, description: string):
         chrome.downloads.onChanged.addListener(listener);
 
         // Set timeout for download (30 seconds)
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           chrome.downloads.onChanged.removeListener(listener);
+          chrome.downloads.cancel(downloadId, () => { void chrome.runtime.lastError; });
           reject(new Error(`Download timeout: ${description}`));
         }, 30000);
       });
@@ -144,7 +153,7 @@ export async function downloadTweetFile(
 
     const fullPath = joinPath(savePath, filename, `${filename}${extension}`);
 
-    await downloadFile(url, fullPath, '推文文件');
+    await downloadFile(url, fullPath, '推文文件', true);
 
     log('info', 'MediaDownloader', 'Tweet file downloaded successfully');
   } catch (error) {
