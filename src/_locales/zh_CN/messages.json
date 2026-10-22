@@ -1,14 +1,14 @@
 {
   "extName": {
-    "message": "Twitter推文收藏器",
+    "message": "GglKnow — X 推文收藏器",
     "description": "扩展程序的名称。"
   },
   "extDescription": {
-    "message": "在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地文件夹。",
+    "message": "将已加载的 X 推文与文章保存为 HTML、JSON 或适用于 Obsidian 的 Markdown；用中英文阅读器整理本地收藏。",
     "description": "扩展程序的描述。"
   },
   "actionTitle": {
-    "message": "Twitter推文收藏器设置",
+    "message": "GglKnow 设置",
     "description": "浏览器操作的标题，悬停时显示。"
   },
   "popupTitle": {
@@ -16,7 +16,7 @@
     "description": "弹出窗口的标题。"
   },
   "popupHeaderDescription": {
-    "message": "推文收藏器 - 设置",
+    "message": "你的本地 X 收藏库",
     "description": "弹出窗口头部的描述。"
   },
   "connectionChecking": {
@@ -28,11 +28,11 @@
     "description": "基本设置部分的标题。"
   },
   "settingsSavePath": {
-    "message": "保存路径",
+    "message": "下载子目录",
     "description": "保存路径输入的标签。"
   },
   "settingsSavePathPlaceholder": {
-    "message": "例如: Downloads/Twitter",
+    "message": "例如 GglKnow（在下载目录内）",
     "description": "保存路径输入的占位符。"
   },
   "settingsFileFormat": {
@@ -40,7 +40,7 @@
     "description": "文件格式复选框的标签。"
   },
   "settingsDownloadMedia": {
-    "message": "下载媒体文件（图片、头像）",
+    "message": "下载图片与头像",
     "description": "下载媒体复选框的标签。"
   },
   "actionsSectionTitle": {
@@ -64,7 +64,7 @@
     "description": "JSON 文件格式。"
   },
   "openTweetBrowserButton": {
-    "message": "推文浏览器",
+    "message": "打开收藏资料库",
     "description": "打开推文浏览器的按钮。"
   },
   "openHelpButton": {
@@ -340,5 +340,29 @@
   "tweetBrowserModalViewOriginal": {
     "message": "🔗 查看原始推文",
     "description": "查看原始推文的链接文本。"
+  },
+  "settingsPathHint": {
+    "message": "相对于 Chrome 默认下载目录，不支持绝对路径。"
+  },
+  "errorCannotExtractThread": {
+    "message": "无法读取本页推文串，请等待加载后重试。"
+  },
+  "errorContextInvalidated": {
+    "message": "扩展已重新加载，请刷新 X 页面后重试。"
+  },
+  "errorInvalidTweetData": {
+    "message": "推文数据无效，请刷新页面后重试。"
+  },
+  "errorNetworkError": {
+    "message": "网络错误，请检查网络连接。"
+  },
+  "errorPermissionDenied": {
+    "message": "权限不足，请检查扩展权限设置。"
+  },
+  "errorSettingsNotFound": {
+    "message": "请先点击插件图标，设置下载子目录。"
+  },
+  "errorStorageError": {
+    "message": "存储不可用，请检查浏览器设置。"
   }
-} 
+}

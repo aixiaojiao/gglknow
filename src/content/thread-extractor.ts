@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * Thread Extractor Module
  * 
@@ -66,7 +67,7 @@ export async function extractThreadData(mainTweetElement: Element): Promise<Thre
         const currentTweetData = extractTweetData(tweetElement);
         // Once thread starts, check if the author is the same
         if (currentTweetData.userHandle === authorHandle) {
-          if (threadTweets.length >= 25) throw new Error('单次最多保存 25 条已加载推文，请缩小范围。');
+          if (threadTweets.length >= 25) throw new Error(tr('单次最多保存 25 条已加载推文，请缩小范围。', 'Save up to 25 loaded posts at a time. Choose a smaller thread.'));
           threadTweets.push(currentTweetData);
           log('info', 'ThreadExtractor', `Found tweet by @${authorHandle} in thread.`);
         } else {

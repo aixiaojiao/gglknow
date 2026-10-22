@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 import TurndownService from 'turndown';
 import { TweetData } from '@/types';
 const ARTICLE = '[data-testid="twitterArticleRichTextView"], [data-testid="longformRichTextComponent"], [data-testid="article-content"], [data-testid="article-wrapper"]';
@@ -70,12 +71,12 @@ markdown.addRule('tables', {
 });
 export function extractTweetData(tweetElement: Element): TweetData {
     if (tweetElement.querySelector('[data-testid="tweet-text-show-more-link"]'))
-        throw new Error('请先手动展开正文再收藏 / Expand the post before saving.');
+        throw new Error(tr('请先手动展开正文再收藏', 'Expand the post before saving.'));
     const article = tweetElement.querySelector(ARTICLE);
     const articleView = tweetElement.querySelector('[data-testid="twitterArticleReadView"]');
     const textRoot = article || tweetElement.querySelector('[data-testid="tweetText"]');
     if (!article && tweetElement.querySelector('a[href*="/article/"], [data-testid="twitterArticleReadView"]'))
-        throw new Error('请先打开文章正文再收藏 / Open the full article first.');
+        throw new Error(tr('请先打开文章正文再收藏', 'Open the full article first.'));
     const user = tweetElement.querySelector('[data-testid="User-Name"], [data-testid="User-Names"]');
     const userLink = Array.from(user?.querySelectorAll('a') || []).find(a => /^\/[\w]+\/?$/.test(new URL(a.href, 'https://x.com').pathname));
     const userHandle = userLink ? new URL(userLink.href, 'https://x.com').pathname.split('/')[1] : '';
@@ -95,7 +96,7 @@ export function extractTweetData(tweetElement: Element): TweetData {
         }
     }
     if (images.size > 50)
-        throw new Error('单次最多保存 50 张图片，请缩小收藏范围。');
+        throw new Error(tr('单次最多保存 50 张图片，请缩小收藏范围。', 'Save up to 50 images at a time. Choose less content.'));
     const template = document.createElement('template');
     template.innerHTML = contentHtml;
     const plain = template.content;
@@ -103,7 +104,7 @@ export function extractTweetData(tweetElement: Element): TweetData {
     plain.querySelectorAll('p,div,h1,h2,h3,h4,li,pre,tr,blockquote,figure').forEach(el => el.append('\n\n'));
     const text = (plain.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
     if (!text && !images.size)
-        throw new Error('当前页面没有可保存的正文，请等待加载后重试。');
+        throw new Error(tr('当前页面没有可保存的正文，请等待加载后重试。', 'No loaded content to save. Wait for the post to load, then try again.'));
     const title = articleView?.querySelector('[data-testid="twitter-article-title"]')?.textContent?.trim();
     return {
         timestamp: new Date().toISOString(), url: location.href,

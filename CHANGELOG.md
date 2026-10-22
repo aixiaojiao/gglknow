@@ -1,5 +1,17 @@
 # 更新日志
 
+## [2.3.1] - 2026-10-22
+
+### Added
+- English and Simplified Chinese interfaces for the local reader and guide, with an in-page language selector.
+- Localized capture buttons, validation notices, background save results, and exported navigation labels.
+- Refreshed bookmark identity, bilingual store artwork, and dedicated English / Chinese README documents.
+
+### Fixed
+- Replaced obsolete help instructions about absolute paths, video downloads, and complete remote-thread capture.
+- Language changes preserve imported content, tags, custom collections, and source text.
+
+
 ## [2.2.1] - 2025-09-06
 
 ### 🐛 重要修复 (Critical Bug Fixes)

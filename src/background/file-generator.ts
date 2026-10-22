@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 import { generateTweetFilename, getFileExtension } from '@/utils';
 import { TweetData, FileGenerationResult, ThreadData } from '@/types';
 export const escapeHtml = (text: string) => String(text || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -53,20 +54,20 @@ function frontmatter(tweet: TweetData, thread: boolean): string {
 export function generateObsidianMarkdown(tweets: TweetData[], local = true, thread = false): string {
     const main = tweets[0];
     if (!main)
-        throw new Error('没有可导出的内容');
+        throw new Error(tr('没有可导出的内容', 'No content to export'));
     const paths = imagePaths(tweets, local);
     const title = main.title || (thread ? `Thread by @${main.userHandle}` : main.text.split('\n')[0]?.slice(0, 100) || `@${main.userHandle}`);
     return frontmatter(main, thread) + `# ${title.replace(/\r?\n/g, ' ')}\n\n` +
-        (thread ? '> 仅包含本次页面已加载的推文，不保证是完整推文串。\n\n' : '') +
-        tweets.map((tweet, i) => `${thread ? `## ${i + 1}. @${tweet.userHandle}\n\n` : ''}${markdownBody(tweet, paths)}\n\n[查看原文](${safeUrl(tweet.tweetUrl || tweet.url)})`).join('\n\n---\n\n') + '\n';
+        (thread ? '> '+tr('仅包含本次页面已加载的推文，不保证是完整推文串。', 'Only posts loaded on this page are included. This may not be the complete thread.')+'\n\n' : '') +
+        tweets.map((tweet, i) => `${thread ? `## ${i + 1}. @${tweet.userHandle}\n\n` : ''}${markdownBody(tweet, paths)}\n\n[${tr('查看原文', 'View original')}](${safeUrl(tweet.tweetUrl || tweet.url)})`).join('\n\n---\n\n') + '\n';
 }
 function htmlDocument(tweets: TweetData[], local: boolean, thread: boolean): string {
     const paths = imagePaths(tweets, local);
-    const title = tweets[0].title || `${thread ? '推文串' : '推文收藏'} · ${tweets[0].userName}`;
+    const title = tweets[0].title || `${thread ? tr('推文串','Thread') : tr('推文收藏','Saved post')} · ${tweets[0].userName}`;
     const data = thread ? { tweets, mainTweet: tweets[0] } : tweets[0];
-    return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>
+    return `<!doctype html><html lang="${tr('zh-CN','en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>
 body{margin:0;padding:40px 20px;background:#f6f7f9;color:#192433;font:17px/1.8 system-ui,sans-serif}.container{max-width:760px;margin:auto}.tweet-card{background:white;padding:36px;margin-bottom:24px;border-radius:12px}.user-info{color:#687386;font-size:14px}.tweet-text{overflow-wrap:anywhere}.tweet-text p,.tweet-text>div{margin:1em 0}.tweet-text img{display:block;max-width:100%;height:auto;margin:24px auto;border-radius:6px}.tweet-text pre{overflow:auto;white-space:pre-wrap;background:#f2f4f7;padding:16px}.tweet-text table{border-collapse:collapse;width:100%;font-size:14px}.tweet-text td,.tweet-text th{border:1px solid #dce1e8;padding:8px}.tweet-meta{font-size:13px;color:#687386;border-top:1px solid #e9ecf0;padding-top:16px}a{color:#5264e7}h1{line-height:1.35}blockquote{border-left:3px solid #aab6cc;padding-left:18px}
-</style></head><body><main class="container">${thread ? '<p>仅保存本页已加载内容，不保证是完整推文串。</p>' : ''}${tweets.map(tweet => `<article class="tweet-card"><div class="user-info"><span class="user-name">${escapeHtml(tweet.userName)}</span> <span class="user-handle">@${escapeHtml(tweet.userHandle)}</span></div>${tweet.title ? `<h1>${escapeHtml(tweet.title)}</h1>` : ''}<div class="tweet-text">${richBody(tweet, paths)}</div><div class="tweet-meta"><time datetime="${escapeHtml(tweet.tweetTime)}">${escapeHtml(tweet.tweetTime || tweet.timestamp)}</time> · <a href="${escapeHtml(safeUrl(tweet.tweetUrl || tweet.url))}" class="view-original-btn" target="_blank" rel="noopener noreferrer">查看原文</a></div></article>`).join('')}<script type="application/json" id="gglknow-data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script></main></body></html>`;
+</style></head><body><main class="container">${thread ? '<p>'+tr('仅保存本页已加载内容，不保证是完整推文串。','Only loaded posts are saved. This may not be the complete thread.')+'</p>' : ''}${tweets.map(tweet => `<article class="tweet-card"><div class="user-info"><span class="user-name">${escapeHtml(tweet.userName)}</span> <span class="user-handle">@${escapeHtml(tweet.userHandle)}</span></div>${tweet.title ? `<h1>${escapeHtml(tweet.title)}</h1>` : ''}<div class="tweet-text">${richBody(tweet, paths)}</div><div class="tweet-meta"><time datetime="${escapeHtml(tweet.tweetTime)}">${escapeHtml(tweet.tweetTime || tweet.timestamp)}</time> · <a href="${escapeHtml(safeUrl(tweet.tweetUrl || tweet.url))}" class="view-original-btn" target="_blank" rel="noopener noreferrer">${tr('查看原文', 'View original')}</a></div></article>`).join('')}<script type="application/json" id="gglknow-data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script></main></body></html>`;
 }
 export async function generateFile(tweet: TweetData, format: 'html' | 'markdown' | 'json', local = true): Promise<FileGenerationResult> {
     return generate([tweet], format, local, false);
@@ -76,7 +77,7 @@ export async function generateFileForThread(thread: ThreadData, format: 'html' |
 }
 function generate(tweets: TweetData[], format: 'html' | 'markdown' | 'json', local: boolean, thread: boolean): FileGenerationResult {
     if (!tweets.length)
-        throw new Error('没有可导出的内容');
+        throw new Error(tr('没有可导出的内容', 'No content to export'));
     const filename = generateTweetFilename(tweets[0]) + (thread ? '_thread' : '');
     if (format === 'html')
         return { filename, extension: '.html', content: htmlDocument(tweets, local, thread) };

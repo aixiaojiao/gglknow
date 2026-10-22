@@ -1,14 +1,14 @@
 {
   "extName": {
-    "message": "Twitter Tweet Collector",
+    "message": "GglKnow — X Post Saver",
     "description": "The name of the extension."
   },
   "extDescription": {
-    "message": "Add a collect button next to Twitter/X tweets to save them to a local folder with one click.",
+    "message": "Save loaded X posts and articles locally as HTML, JSON, or Obsidian-ready Markdown. Read and organize in English or Chinese.",
     "description": "The description of the extension."
   },
   "actionTitle": {
-    "message": "Twitter Tweet Collector Settings",
+    "message": "GglKnow settings",
     "description": "The title of the browser action, shown on hover."
   },
   "popupTitle": {
@@ -16,7 +16,7 @@
     "description": "Title for the popup window."
   },
   "popupHeaderDescription": {
-    "message": "Tweet Collector - Settings",
+    "message": "Your local X archive",
     "description": "Description in the popup header."
   },
   "connectionChecking": {
@@ -28,11 +28,11 @@
     "description": "Title for basic settings section."
   },
   "settingsSavePath": {
-    "message": "Save Path",
+    "message": "Download subfolder",
     "description": "Label for save path input."
   },
   "settingsSavePathPlaceholder": {
-    "message": "e.g., Downloads/Twitter",
+    "message": "e.g. GglKnow (inside Downloads)",
     "description": "Placeholder for save path input."
   },
   "settingsFileFormat": {
@@ -40,7 +40,7 @@
     "description": "Label for file format checkboxes."
   },
   "settingsDownloadMedia": {
-    "message": "Download media (images, avatars)",
+    "message": "Download images and avatars",
     "description": "Label for download media checkbox."
   },
   "actionsSectionTitle": {
@@ -64,7 +64,7 @@
     "description": "JSON file format."
   },
   "openTweetBrowserButton": {
-    "message": "Tweet Browser",
+    "message": "Open library",
     "description": "Button to open the tweet browser."
   },
   "openHelpButton": {
@@ -340,5 +340,29 @@
   "tweetBrowserModalViewOriginal": {
     "message": "🔗 View Original Tweet",
     "description": "Link text to view the original tweet."
+  },
+  "settingsPathHint": {
+    "message": "Relative to Chrome’s default download folder. No absolute paths."
+  },
+  "errorCannotExtractThread": {
+    "message": "Could not read the loaded thread. Wait for it to load and try again."
+  },
+  "errorContextInvalidated": {
+    "message": "The extension was updated. Refresh the X page and try again."
+  },
+  "errorInvalidTweetData": {
+    "message": "Invalid post data. Refresh the page and try again."
+  },
+  "errorNetworkError": {
+    "message": "Network error. Check your connection."
+  },
+  "errorPermissionDenied": {
+    "message": "Permission denied. Check extension permissions."
+  },
+  "errorSettingsNotFound": {
+    "message": "Open the extension popup and set a download subfolder first."
+  },
+  "errorStorageError": {
+    "message": "Storage is unavailable. Check your browser settings."
   }
-} 
+}

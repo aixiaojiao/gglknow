@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * Popup Settings Manager Module
  * 
@@ -68,7 +69,7 @@ export async function saveSettings(settings: Partial<ExtensionSettings>): Promis
       return true;
     } else {
       log('error', 'PopupSettings', 'Failed to save settings', response?.error);
-      throw new Error(response?.error || '保存设置失败');
+      throw new Error(response?.error || tr('保存设置失败', 'Could not save settings'));
     }
   } catch (error) {
     log('error', 'PopupSettings', 'Error saving settings', error);
@@ -155,18 +156,18 @@ export function openHelpPage(): void {
  */
 export function validateSavePath(path: string): string | null {
   if (!path || path.trim() === '') {
-    return '保存路径不能为空';
+    return tr('保存路径不能为空', 'Enter a download subfolder');
   }
   
   // Check for invalid characters
   const invalidChars = /[<>:"|?*]/;
   if (invalidChars.test(path)) {
-    return '保存路径包含无效字符';
+    return tr('保存路径包含无效字符', 'The download subfolder contains invalid characters');
   }
   
   // Check if path is too long
   if (path.length > 200) {
-    return '保存路径过长';
+    return tr('保存路径过长', 'The download subfolder is too long');
   }
   
   return null;
@@ -177,11 +178,11 @@ export function validateSavePath(path: string): string | null {
  */
 export function getDefaultSavePathSuggestions(): string[] {
   return [
-    'Downloads/Twitter',
-    'Documents/Twitter',
-    'Desktop/Twitter',
-    'Downloads/GglKnow',
-    'Documents/GglKnow'
+    'GglKnow',
+    'Reading/X',
+    'Research/X',
+    'Twitter',
+    'Bookmarks/X'
   ];
 }
 

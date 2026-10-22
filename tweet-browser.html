@@ -1,28 +1,28 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GglKnow · 收藏资料库</title><link rel="stylesheet" href="vendor/tabler.min.css"><link rel="stylesheet" href="reader.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title data-zh="GglKnow · 收藏资料库" data-en="GglKnow · Saved library">GglKnow · Saved library</title><link rel="stylesheet" href="vendor/tabler.min.css"><link rel="stylesheet" href="reader.css"></head>
 <body>
 <div class="library-shell">
   <aside class="library-sidebar">
-    <a class="brand" href="tweet-browser.html">GglKnow</a>
-    <label class="btn btn-primary import-folder" for="folderInput"><span aria-hidden="true">＋</span> 导入文件夹</label>
+    <a class="brand" href="tweet-browser.html"><img src="icons/icon32.png" alt="">GglKnow</a>
+    <label class="btn btn-primary import-folder" for="folderInput"><span aria-hidden="true">＋</span> <span data-zh="导入文件夹" data-en="Import folder">导入文件夹</span></label>
     <input id="folderInput" type="file" webkitdirectory multiple hidden>
-    <nav aria-label="资料库"><button class="nav-item active" data-filter="all">全部收藏</button><button class="nav-item" data-filter="images">有图片</button><button class="nav-item" data-filter="threads">推文串</button></nav>
-    <div class="section-heading"><span>收藏夹</span><button id="newCollection" class="quiet-btn" aria-label="新建收藏夹">＋</button></div>
-    <nav id="collections" aria-label="收藏夹"></nav>
-    <div class="sidebar-footer"><p>内容保存在你的设备上</p><button id="exportBackup" class="btn">导出备份</button><button id="importBackup" class="btn">导入备份</button><input type="file" id="backupInput" accept=".json" hidden></div>
+    <nav aria-label="资料库" data-zh-aria-label="资料库" data-en-aria-label="Library"><button class="nav-item active" data-filter="all"><span data-zh="全部收藏" data-en="All saved">全部收藏</span></button><button class="nav-item" data-filter="images"><span data-zh="有图片" data-en="With images">有图片</span></button><button class="nav-item" data-filter="threads"><span data-zh="推文串" data-en="Threads">推文串</span></button></nav>
+    <div class="section-heading"><span><span data-zh="收藏夹" data-en="Collections">收藏夹</span></span><button id="newCollection" class="quiet-btn" aria-label="新建收藏夹" data-zh-aria-label="新建收藏夹" data-en-aria-label="New collection">＋</button></div>
+    <nav id="collections" aria-label="收藏夹" data-zh-aria-label="收藏夹" data-en-aria-label="Collections"></nav>
+    <div class="sidebar-footer"><label class="language-label" for="uiLanguage"><span data-zh="界面语言" data-en="Interface language">界面语言</span></label><select id="uiLanguage" class="form-select" aria-label="Interface language"><option value="en">English</option><option value="zh">简体中文</option></select><p><span data-zh="内容保存在你的设备上" data-en="Your library stays on your device">内容保存在你的设备上</span></p><button id="exportBackup" class="btn"><span data-zh="导出备份" data-en="Export backup">导出备份</span></button><button id="importBackup" class="btn"><span data-zh="导入备份" data-en="Import backup">导入备份</span></button><input type="file" id="backupInput" accept=".json" hidden></div>
   </aside>
-  <section class="library-list" aria-label="收藏列表">
-    <header class="list-header"><div class="list-title"><h1 id="listTitle">全部收藏</h1><span id="count">0 篇</span></div><input id="search" class="form-control" type="search" placeholder="搜索收藏…" aria-label="搜索收藏"><div class="filter-row"><select id="author" class="form-select" aria-label="作者"><option value="">所有作者</option></select><select id="tagFilter" class="form-select" aria-label="标签"><option value="">所有标签</option></select></div></header>
-    <div id="entries" class="entry-list"></div><button id="loadMore" class="btn" hidden>显示更多</button>
+  <section class="library-list" aria-label="收藏列表" data-zh-aria-label="收藏列表" data-en-aria-label="Saved posts">
+    <header class="list-header"><div class="list-title"><h1 id="listTitle"><span data-zh="全部收藏" data-en="All saved">全部收藏</span></h1><span id="count"><span data-zh="0 篇" data-en="0 saved">0 篇</span></span></div><input id="search" class="form-control" type="search" placeholder="搜索收藏…" data-zh-placeholder="搜索收藏…" data-en-placeholder="Search saved posts…" aria-label="搜索收藏" data-zh-aria-label="搜索收藏" data-en-aria-label="Search saved posts"><div class="filter-row"><select id="author" class="form-select" aria-label="作者" data-zh-aria-label="作者" data-en-aria-label="Author"><option value="">所有作者</option></select><select id="tagFilter" class="form-select" aria-label="标签" data-zh-aria-label="标签" data-en-aria-label="Tag"><option value="">所有标签</option></select></div></header>
+    <div id="entries" class="entry-list"></div><button id="loadMore" class="btn" hidden><span data-zh="显示更多" data-en="Show more">显示更多</span></button>
     <p id="importStatus" class="import-status" role="status"></p>
   </section>
   <main class="reader-pane" id="readerPane">
-    <div class="reader-toolbar" id="readerToolbar" hidden><a id="original" target="_blank" rel="noopener noreferrer">查看原文 ↗</a><button id="exportMarkdown" class="btn">导出 Markdown</button></div>
-    <form id="metadataForm" class="metadata-form" hidden><div><label for="tagInput">添加标签</label><input id="tagInput" class="form-control" placeholder="输入标签后按回车"></div><div><label for="collectionSelect">添加到收藏夹</label><select id="collectionSelect" class="form-select"></select></div></form>
-    <article id="reading" class="reading"><div class="reader-empty"><div class="empty-mark" aria-hidden="true">G</div><h2>把值得留下的内容<br>变成自己的知识</h2><p>导入你保存的推文文件夹，<br>在这里阅读、搜索和整理。</p><span>支持新旧 HTML、JSON 和本地图片</span></div></article>
+    <div class="reader-toolbar" id="readerToolbar" hidden><a id="original" target="_blank" rel="noopener noreferrer"><span data-zh="查看原文 ↗" data-en="View original ↗">查看原文 ↗</span></a><button id="exportMarkdown" class="btn"><span data-zh="导出 Markdown" data-en="Export Markdown">导出 Markdown</span></button></div>
+    <form id="metadataForm" class="metadata-form" hidden><div><label for="tagInput"><span data-zh="添加标签" data-en="Add tag">添加标签</span></label><input id="tagInput" class="form-control" placeholder="输入标签后按回车" data-zh-placeholder="输入标签后按回车" data-en-placeholder="Enter a tag, then press Enter"></div><div><label for="collectionSelect"><span data-zh="添加到收藏夹" data-en="Collection">添加到收藏夹</span></label><select id="collectionSelect" class="form-select"></select></div></form>
+    <article id="reading" class="reading"><div class="reader-empty"><div class="empty-mark" aria-hidden="true">G</div><h2><span data-zh="把值得留下的内容" data-en="Keep what matters.">把值得留下的内容</span><br><span data-zh="变成自己的知识" data-en="Make it your knowledge.">变成自己的知识</span></h2><p><span data-zh="导入你保存的推文文件夹，" data-en="Import your saved posts,">导入你保存的推文文件夹，</span><br><span data-zh="在这里阅读、搜索和整理。" data-en="then read, search, and organize.">在这里阅读、搜索和整理。</span></p><span><span data-zh="支持新旧 HTML、JSON 和本地图片" data-en="Works with new and legacy HTML, JSON, and local images">支持新旧 HTML、JSON 和本地图片</span></span></div></article>
   </main>
 </div><div id="notification" class="notification" role="status" hidden></div>
-<dialog id="collectionDialog"><form method="dialog"><h2>新建收藏夹</h2><input id="collectionName" class="form-control" required maxlength="60" aria-label="收藏夹名称"><div class="dialog-actions"><button value="cancel" class="btn" formnovalidate>取消</button><button value="create" class="btn btn-primary">创建</button></div></form></dialog>
+<dialog id="collectionDialog"><form method="dialog"><h2><span data-zh="新建收藏夹" data-en="New collection">新建收藏夹</span></h2><input id="collectionName" class="form-control" required maxlength="60" aria-label="收藏夹名称" data-zh-aria-label="收藏夹名称" data-en-aria-label="Collection name"><div class="dialog-actions"><button value="cancel" class="btn" formnovalidate><span data-zh="取消" data-en="Cancel">取消</span></button><button value="create" class="btn btn-primary"><span data-zh="创建" data-en="Create">创建</span></button></div></form></dialog>
 <script src="reader.js"></script>
 </body></html>

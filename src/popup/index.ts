@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * Popup Script for GglKnow Extension
  * 
@@ -285,7 +286,7 @@ class PopupManager {
       }
     } catch (error) {
       log('error', 'PopupManager', 'Failed to validate save path input', error);
-      this.showError('保存路径验证失败');
+      this.showError(tr('保存路径验证失败', 'Could not validate the download subfolder'));
     }
   }
 

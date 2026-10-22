@@ -1,0 +1,23 @@
+{
+  "title": "A small system for better ideas",
+  "contentKind": "article",
+  "text": "A small system for better ideas\n\nSaving something is only the beginning. The real value comes when you can find it, connect it, and use it again.\n\nFrom a fleeting post to a lasting note",
+  "contentHtml": "<p>Saving something is only the beginning. The real value comes when you can find it, connect it, and use it again.</p><img src=\"media/image_1.svg\" alt=\"Capture, organize, reuse\"><h2>From a fleeting post to a lasting note</h2><p>Keep the original context, add a few useful tags, and let the idea become part of your next project.</p>",
+  "contentMarkdown": "A small system for better ideas\n\nSaving something is only the beginning. The real value comes when you can find it, connect it, and use it again.\n\nFrom a fleeting post to a lasting note\n\n![](media/image_1.svg)",
+  "userName": "GglKnow Demo",
+  "userHandle": "gglknow_demo",
+  "tweetUrl": "https://x.com/gglknow_demo/status/10001",
+  "url": "https://x.com/gglknow_demo/status/10001",
+  "timestamp": "2026-10-22T06:00:00Z",
+  "tweetTime": "2026-10-22T06:00:00Z",
+  "media": {
+    "images": [
+      "media/image_1.svg"
+    ],
+    "videos": []
+  },
+  "tags": [
+    "Knowledge",
+    "Reading"
+  ]
+}

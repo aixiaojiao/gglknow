@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * Content Script for GglKnow Extension
  * 
@@ -229,7 +230,7 @@ class TwitterCollector {
         showTemporaryMessage(
           buttonElement,
           ButtonState.SUCCESS,
-          response.message || '串已收藏',
+          response.message || tr('串已收藏','Loaded thread saved'),
           2000
         );
       } else {
@@ -259,22 +260,22 @@ class TwitterCollector {
    * Get short error message for UI display
    */
   private getShortErrorMessage(errorMessage: string): string {
-    if (/请先手动|请先打开|单次最多|正在保存|请间隔|当前页面/.test(errorMessage)) return errorMessage.split(' / ')[0];
+    if (/请先手动|请先打开|单次最多|正在保存|请间隔|当前页面|Expand the post|Open the full article|Save up to|save is already|Wait 5 seconds|No loaded content/.test(errorMessage)) return errorMessage;
     // Check if context is still valid before using chrome.i18n
     const contextValid = checkExtensionContext();
     
     if (errorMessage.includes('context invalidated') || errorMessage.includes('扩展已重新加载')) {
-      return contextValid ? (chrome.i18n.getMessage('errorRefreshPage') || '请刷新页面') : '请刷新页面';
+      return contextValid ? (chrome.i18n.getMessage('errorRefreshPage')  || tr('请刷新页面','Refresh the page')) : tr('请刷新页面','Refresh the page');
     } else if (errorMessage.includes('设置') || errorMessage.toLowerCase().includes('setting')) {
-      return contextValid ? (chrome.i18n.getMessage('errorSettingsNeeded') || '请先设置') : '请先设置';
+      return contextValid ? (chrome.i18n.getMessage('errorSettingsNeeded')  || tr('请先设置','Open extension settings')) : tr('请先设置','Open extension settings');
     } else if (errorMessage.includes('网络') || errorMessage.toLowerCase().includes('network')) {
-      return contextValid ? (chrome.i18n.getMessage('errorNetwork') || '网络错误') : '网络错误';
+      return contextValid ? (chrome.i18n.getMessage('errorNetwork')  || tr('网络错误','Network error')) : tr('网络错误','Network error');
     } else if (errorMessage.includes('下载') || errorMessage.toLowerCase().includes('download')) {
-      return contextValid ? (chrome.i18n.getMessage('errorDownloadFailed') || '下载失败') : '下载失败';
+      return contextValid ? (chrome.i18n.getMessage('errorDownloadFailed')  || tr('下载失败','Download failed')) : tr('下载失败','Download failed');
     } else if (errorMessage.includes('数据') || errorMessage.includes('提取') || errorMessage.toLowerCase().includes('extract')) {
-      return contextValid ? (chrome.i18n.getMessage('errorExtractionFailed') || '提取失败') : '提取失败';
+      return contextValid ? (chrome.i18n.getMessage('errorExtractionFailed')  || tr('提取失败','Could not read this post')) : tr('提取失败','Could not read this post');
     } else {
-      return contextValid ? (chrome.i18n.getMessage('errorCollectionFailed') || '收藏失败') : '收藏失败';
+      return contextValid ? (chrome.i18n.getMessage('errorCollectionFailed')  || tr('收藏失败','Save failed')) : tr('收藏失败','Save failed');
     }
   }
 

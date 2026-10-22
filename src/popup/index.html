@@ -298,12 +298,14 @@
         border-color: #333;
       }
     }
-  </style>
+  body{background:#f4f3fa;color:#262738}.container{box-shadow:none;border:1px solid #e6e4ef}.header{background:#f1eefb;color:#302b51;text-align:left}.header p{color:#77718d}.button{background:#6856cf;border-color:#6856cf;box-shadow:none}.button:hover{background:#5745bb}.button.secondary{background:#fff;color:#51476f;border-color:#e0dce9}.path-hint{font-size:11px;color:#827a93;line-height:1.6;margin-top:7px}.section-title{color:#716881}.form-input:focus{border-color:#6856cf}.version-info{font-size:11px}
+@media(prefers-color-scheme:dark){body{background:#191723}.container{border-color:#393344}.header{background:#2c2541;color:#eee8ff}.header p{color:#b7aacf}.button.secondary{background:#2c2638;color:#ded4ef}.path-hint,.section-title{color:#b7aacf}}
+</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>GglKnow</h1>
+      <h1><img src="../../icons/icon48.png" alt="" width="32" height="32" style="vertical-align:middle;margin-right:9px">GglKnow</h1>
       <p data-i18n="popupHeaderDescription">Tweet Collector - Settings</p>
     </div>
     
@@ -323,7 +325,7 @@
         
         <div class="form-group">
           <label for="savePath" class="form-label" data-i18n="settingsSavePath">Save Path</label>
-          <input type="text" id="savePath" class="form-input" data-i18n-placeholder="settingsSavePathPlaceholder">
+          <input type="text" id="savePath" class="form-input" data-i18n-placeholder="settingsSavePathPlaceholder"><p class="path-hint" data-i18n="settingsPathHint">Relative to Chrome’s default download folder. No absolute paths.</p>
         </div>
 
         <div class="form-group">

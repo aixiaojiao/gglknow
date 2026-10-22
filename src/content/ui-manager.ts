@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * UI Manager Module
  * 
@@ -165,11 +166,11 @@ const ICONS = {
  * Button text for different states
  */
 const BUTTON_TEXT = {
-  idle: '收藏',
-  thread: '收藏串',
-  loading: '收藏中...',
-  success: '已收藏',
-  error: '收藏失败'
+  idle: tr('收藏', 'Collect'),
+  thread: tr('收藏串', 'Save loaded thread'),
+  loading: tr('收藏中...', 'Saving\u2026'),
+  success: tr('已收藏', 'Saved'),
+  error: tr('收藏失败', 'Save failed')
 };
 
 /**
@@ -213,7 +214,7 @@ export function createCollectionButton(
     const collectBtn = document.createElement('div');
     collectBtn.className = 'twitter-collector-btn';
     collectBtn.innerHTML = `
-      <div class="collect-button" title="收藏推文">
+      <div class="collect-button" title="${tr('收藏推文', 'Save post')}">
         ${ICONS.idle}
         <span class="collect-text">${BUTTON_TEXT.idle}</span>
       </div>
@@ -265,7 +266,7 @@ export function createThreadCollectionButton(
     const collectBtn = document.createElement('div');
     collectBtn.className = 'twitter-collector-thread-btn';
     collectBtn.innerHTML = `
-      <div class="collect-button thread-button" title="保存本页已加载的推文（不会自动翻页）">
+      <div class="collect-button thread-button" title="${tr('保存本页已加载的推文（不会自动翻页）', 'Save only the posts loaded on this page')}">
         ${ICONS.thread}
         <span class="collect-text">${BUTTON_TEXT.thread}</span>
       </div>
