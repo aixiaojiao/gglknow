@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "2.3.0",
-  "version_name": "2.3.0 preview",
+  "version": "2.3.1",
+  "version_name": "2.3.1",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": [
@@ -15,9 +15,16 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://twitter.com/*", "https://x.com/*"],
-      "js": ["content/index.js"],
-      "css": ["styles.css"]
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ],
+      "js": [
+        "content/index.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
     }
   ],
   "background": {
@@ -41,8 +48,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["tweet-browser.html", "help.html"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "tweet-browser.html",
+        "help.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
-} 
+}

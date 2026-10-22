@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * Background Service Worker for GglKnow Extension
  * 
@@ -32,11 +33,11 @@ import { downloadMediaFiles, downloadTweetFile } from './media-downloader';
 // A session-persisted cooldown plus a process mutex prevents parallel saves across tabs.
 let collectionBusy = false;
 async function limitedCollection(work: () => Promise<CollectTweetResponse>): Promise<CollectTweetResponse> {
-  if (collectionBusy) return {success:false,error:'正在保存，请完成后再试 / A save is already in progress.'};
+  if (collectionBusy) return {success:false,error:tr('正在保存，请完成后再试', 'A save is already in progress.')};
   collectionBusy = true;
   try {
     const {nextCollectionAt = 0} = await chrome.storage.session.get('nextCollectionAt');
-    if (Date.now() < nextCollectionAt) return {success:false,error:'请间隔 5 秒再收藏 / Wait 5 seconds between saves.'};
+    if (Date.now() < nextCollectionAt) return {success:false,error:tr('请间隔 5 秒再收藏', 'Wait 5 seconds between saves.')};
     await chrome.storage.session.set({nextCollectionAt:Date.now()+5000});
     return await work();
   } finally { collectionBusy = false; }
@@ -146,7 +147,7 @@ async function handleExtensionMessage(
       case MessageType.SAVE_SETTINGS: {
         const saveMessage = message as SaveSettingsMessage;
         await saveSettings(saveMessage.settings);
-        sendResponse({ success: true, message: '设置保存成功' });
+        sendResponse({ success: true, message: tr('设置保存成功', 'Settings saved') });
         break;
       }
 
@@ -167,7 +168,7 @@ async function handleExtensionMessage(
  */
 async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetResponse> {
   try {
-    if ((tweetData?.media?.images?.length || 0) > 50) throw new Error('单次最多保存 50 张图片');
+    if ((tweetData?.media?.images?.length || 0) > 50) throw new Error(tr('单次最多保存 50 张图片', 'Save up to 50 images at a time'));
     log('info', 'ServiceWorker', 'Starting tweet collection', {
       user: tweetData.userName,
       hasText: !!tweetData.text,
@@ -246,7 +247,7 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
 
     return {
       success: true,
-      message: mediaIncomplete ? '正文已保存，部分图片下载失败' : '推文收藏成功',
+      message: mediaIncomplete ? tr('正文已保存，部分图片下载失败', 'Text saved; some images could not be downloaded') : tr('推文收藏成功', 'Post saved'),
       filename,
       mediaCount
     };
@@ -265,11 +266,11 @@ async function handleCollectTweet(tweetData: TweetData): Promise<CollectTweetRes
  */
 async function handleCollectThread(threadData: ThreadData): Promise<CollectTweetResponse> {
   try {
-    if (!Array.isArray(threadData?.tweets) || threadData.tweets.length > 25) throw new Error('单次最多保存 25 条已加载推文');
-    if (new Set(threadData.tweets.flatMap(t => t.media?.images || [])).size > 50) throw new Error('单次最多保存 50 张图片');
+    if (!Array.isArray(threadData?.tweets) || threadData.tweets.length > 25) throw new Error(tr('单次最多保存 25 条已加载推文', 'Save up to 25 loaded posts at a time'));
+    if (new Set(threadData.tweets.flatMap(t => t.media?.images || [])).size > 50) throw new Error(tr('单次最多保存 50 张图片', 'Save up to 50 images at a time'));
     const mainTweet = threadData.mainTweet || threadData.tweets[0];
     if (!mainTweet) {
-      throw createError(ExtensionError.INVALID_TWEET_DATA, '线程数据为空或无效');
+      throw createError(ExtensionError.INVALID_TWEET_DATA, tr('线程数据为空或无效', 'The loaded thread is empty or invalid'));
     }
 
     log('info', 'ServiceWorker', 'Starting thread collection', {
@@ -318,7 +319,7 @@ async function handleCollectThread(threadData: ThreadData): Promise<CollectTweet
     
     return {
       success: true,
-      message: mediaIncomplete ? '正文已保存，部分图片下载失败' : '已保存本页已加载推文（不保证串完整）',
+      message: mediaIncomplete ? tr('正文已保存，部分图片下载失败', 'Text saved; some images could not be downloaded') : tr('已保存本页已加载推文（不保证串完整）', 'Loaded posts saved (the thread may be incomplete)'),
       filename: baseFilename,
       mediaCount: totalMediaCount
     };

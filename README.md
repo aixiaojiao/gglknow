@@ -1,114 +1,85 @@
-# Twitter推文收藏器 Chrome插件
+<div align="center">
+  <img src="icons/icon128.png" width="80" alt="GglKnow bookmark logo">
+  <h1>GglKnow</h1>
+  <p><strong>Keep what matters. Make it your knowledge.</strong></p>
+  <p>Save X posts and articles to your computer.<br>Read, organize, and bring them into Obsidian.</p>
+  <p><b>English</b> · <a href="README.zh-CN.md">简体中文</a></p>
+  <p><a href="https://chromewebstore.google.com/detail/njdfieabmofhifpgficmgmjaggffkhdk">Chrome Web Store</a> · <a href="https://github.com/aixiaojiao/gglknow/issues">Report an issue</a> · <a href="PRIVACY_POLICY.md">Privacy</a></p>
+</div>
 
-一个简单易用的Chrome浏览器插件，用于在Twitter/X推文旁边添加收藏按钮，一键保存推文到本地。
+![GglKnow local reader](assets/store/en/screenshots/01-library.png)
 
-## 功能特点
+A useful post should be more than a bookmark you never open again. GglKnow saves the content already loaded on X as portable files you control, with a local library for reading and organizing them later.
 
-### 下载与 Obsidian
-- 用户点击后保存当前页面已经加载的正文，支持普通推文、长文章和本页推文串。
-- 导出 HTML、JSON、Markdown，保留换行、段落、列表、表格和文中图片顺序。
-- Markdown 包含 Obsidian Properties：`title`、`type`、`source`、`author`、`author_handle`、`url`、`created`、`captured`、`published`、`tags`、`capture_scope`。
-- 将整篇收藏目录（Markdown 和 `media` 子目录）一起移入 Obsidian 仓库，图片使用相对路径。只导出 Markdown 时，仍需保留原 `media` 目录。
-- 下载路径相对于 Chrome 默认下载目录，例如 `Twitter`，不需要重复写 `Downloads/`。
+## What you can do
 
-### 本地阅读器
-- 基于 [Tabler](https://github.com/tabler/tabler) 的三栏阅读界面，搜索正文、作者和标签，按作者、标签、收藏夹、图片和推文串筛选。
-- 导入新旧 HTML / JSON 收藏，重复格式只显示一篇；图片从所选目录读取。
-- 标签和收藏夹存于当前浏览器，支持两种旧版备份格式；刷新页面后需重新选择收藏文件夹。
+| Save | Read | Take it with you |
+| --- | --- | --- |
+| Export posts, articles, and loaded threads as **HTML, JSON, and Markdown**. | Search your library and filter by author, tags, collections, images, or threads. | Use **Obsidian Properties** and relative media paths, without a proprietary storage format. |
+| Preserve paragraphs, lists, tables, and inline image order. | Add your own tags and collections. Import legacy saves and metadata backups. | Keep the Markdown file and its `media` folder together when moving them into your vault. |
 
-### 收藏边界
-- 不自动翻页、滚动、展开正文、轮询或调用 X 私有接口。正文折叠时先由用户手动展开。
-- 全部标签页共享 5 秒收藏间隔，同一时间只允许一个保存任务；单次最多 25 条已加载推文、50 张图片；图片下载并发为 2。
-- 推文串明确标注“仅本页已加载”，不保证覆盖未加载或被虚拟滚动移除的内容。
-- 视频下载暂不支持。平台规则和页面结构可能变化；限频不能保证账号不会被限制。请遵守 [X 自动化规则](https://help.x.com/en/rules-and-policies/x-automation)。
+**English and Simplified Chinese:** the popup and X capture controls follow Chrome’s interface language. The reader and guide also have a language selector. Switching language changes the interface, not the original content or your custom tags and collection names.
 
-## 安装与使用
+## Get started
 
-### 1. 安装
+1. [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/njdfieabmofhifpgficmgmjaggffkhdk). The store may serve an earlier approved version while a new release is under review.
+2. Open the extension popup. Enter a download subfolder such as `GglKnow`, select your export formats, and save the settings.
+3. On X, manually expand a post or open an article. Wait for the content to load, then click **Collect**.
+4. Open **Library** from the popup. Import the complete saved folder, including `media`, to read and organize it.
 
-商店已有公开版本。以下步骤用于本地测试版；生产更新需要经过 PR 审阅及商店审核。
+The download path is relative to Chrome’s default download directory. For example, `GglKnow` creates a folder inside Downloads. Absolute paths are not supported. Folder access in the reader is temporary: select it again after reopening or refreshing the page. Your tags and collections remain in the browser.
 
-1.  **克隆或下载代码**:
-    ```bash
-    git clone https://github.com/aixiaojiao/gglknow.git
-    cd gglknow
-    ```
-2.  **安装依赖**:
-    需要 [Node.js](https://nodejs.org/) (v18 或更高版本)。
-    ```bash
-    npm install
-    ```
-3.  **构建项目**:
-    此命令会编译 TypeScript 代码、打包文件，并将所有必要的资源复制到 `dist` 目录中。
-    ```bash
-    npm run build
-    ```
-4.  **加载扩展**:
-    - 打开 Chrome 浏览器，访问 `chrome://extensions/`。
-    - 开启右上角的 **“开发者模式”**。
-    - 点击 **“加载已解压的扩展程序”**。
-    - 选择项目根目录下的 `dist` 文件夹。
-    - 插件安装完成！
+## Obsidian, without the copy-and-paste
 
-### 2. 使用
-
-1.  **配置设置**:
-    - 点击浏览器工具栏中的插件图标，打开设置弹窗。
-    - 首次使用时，请务必设置一个用于保存推文的 **“保存路径”**。
-    - 根据需要选择保存格式、是否下载媒体文件等。
-2.  **收藏推文**:
-    - 访问 Twitter/X 网站，在任意推文下方即可看到新增的 **“收藏”** 按钮。
-    - 点击按钮，推文及其媒体文件将根据您的设置自动下载到指定路径。
-3.  **浏览收藏**:
-    - 点击插件弹窗中的 **“打开推文浏览器”**，即可查看和管理已保存的推文。
-
-## 开发说明
-
-### 技术栈
-
-- **Manifest V3**
-- **TypeScript**
-- **Vite** & **Rollup** (用于构建)
-- **Node.js**
-- Chrome Extension APIs
-- CSS3
-
-### 项目结构
-
-项目源代码位于 `src` 目录，并被构建到 `dist` 目录中。
-
-```
-gglknow/
-├── dist/                # 构建输出目录 (加载到Chrome)
-├── src/                 # 源代码
-│   ├── background/      # 后台服务脚本 (Service Worker)
-│   ├── content/         # 内容脚本 (注入到页面)
-│   ├── popup/           # 弹出窗口UI
-│   ├── types/           # TypeScript 类型定义
-│   └── utils/           # 通用工具函数
-├── package.json         # 项目依赖与脚本
-├── manifest.json        # 扩展清单文件
-├── tsconfig.json        # TypeScript 配置文件
-├── rollup.sw.config.js  # Rollup 后台脚本配置
-├── rollup.popup.config.js # Rollup 弹窗脚本配置
-└── rollup.content.config.js # Rollup 内容脚本配置
+```text
+Your vault/
+└── Saved article/
+    ├── article.md
+    └── media/
+        ├── image_1.jpg
+        └── image_2.png
 ```
 
-### 开发脚本
+Markdown exports include `title`, `type`, `source`, `author`, `author_handle`, `url`, `created`, `captured`, `published`, `tags`, and `capture_scope`. Field names stay stable across languages. Add tags in the reader and export Markdown again when you want an updated copy.
 
-- `npm run dev`: 启动 Vite 开发服务器（主要用于 UI 开发）。
-- `npm run build`: 执行完整的生产构建。
-- `npm run lint`: 检查代码风格。
-- `npm run type-check`: 进行 TypeScript 类型检查。
+## What gets saved
 
-## 更新日志
+GglKnow saves **only content currently loaded on the page**. It does not automatically scroll, expand posts, paginate, or call private X APIs. A saved thread may be incomplete; collapsed, unloaded, or virtualized-away content is excluded.
 
-详细的更新历史请查看 [CHANGELOG.md](CHANGELOG.md)。
+- One save task at a time, with a shared **five-second interval** across tabs.
+- Up to **25 loaded posts** and **50 images** per save; two concurrent image downloads.
+- If some images fail, the extension reports partial success and keeps the saved text.
+- No video downloads, AI tagging, paid subscriptions, or developer cloud storage in this release.
 
-## 贡献
+Follow X’s rules and respect content owners’ rights. These limits do not guarantee protection from platform restrictions.
 
-欢迎通过提交 Issue 和 Pull Request 来为项目做出贡献！
+## Your files stay yours
 
-## 许可证
+Saved content and reader metadata are processed locally and are not uploaded to the developer. Extension settings use `chrome.storage.sync`, so Chrome may sync them if browser sync is enabled. Tags and collections use local browser storage; cooldown state uses session storage. Image downloads contact X’s image servers. There are no analytics trackers. See the [privacy policy](PRIVACY_POLICY.md).
+
+## Run from source
+
+Requires Node.js 18+ and a Chromium browser with Manifest V3 support.
+
+```sh
+npm ci
+npm run build
+```
+
+Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `dist/`. Refresh any open X tabs after updating the extension.
+
+| Command | Purpose |
+| --- | --- |
+| `npm run build` | Type-check and build all extension surfaces and bundled dependencies. |
+| `npm run lint` | Check TypeScript sources. |
+| `npm run zip` | Package the existing `dist/` as a store upload ZIP. Run after building. |
+
+The root `manifest.json` is the build entry. Releases go through a PR and Chrome Web Store review. Store image sources and exported assets are in [`assets/store`](assets/store); the guide is bundled in the extension.
+
+## Feedback and credits
+
+Include your browser version, the affected X URL if it is safe to share, expected versus actual behavior, and whether the problem concerns capture, export, or the reader. Never include private browsing data or access credentials in an issue.
+
+Built with TypeScript, Vite, Rollup, [Tabler](https://github.com/tabler/tabler), [DOMPurify](https://github.com/cure53/DOMPurify), and [Turndown](https://github.com/mixmark-io/turndown). Dependency licenses ship with the extension.
 
 [MIT License](LICENSE)

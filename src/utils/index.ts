@@ -1,3 +1,4 @@
+import { tr } from '../ui-language';
 /**
  * GglKnow Extension Utility Functions
  * 
@@ -128,21 +129,21 @@ export function validateTweetData(tweetData: TweetData): ExtensionErrorInfo | nu
   if (!tweetData) {
     return {
       type: ExtensionError.INVALID_TWEET_DATA,
-      message: '推文数据为空'
+      message: tr('推文数据为空', 'Post data is empty')
     };
   }
   
   if (!tweetData.userName && !tweetData.userHandle) {
     return {
       type: ExtensionError.INVALID_TWEET_DATA,
-      message: '无法提取推文用户信息'
+      message: tr('无法提取推文用户信息', 'Could not read the post author')
     };
   }
   
   if (!tweetData.text && (!tweetData.media || tweetData.media.images.length === 0)) {
     return {
       type: ExtensionError.INVALID_TWEET_DATA,
-      message: '推文内容和媒体都为空'
+      message: tr('推文内容和媒体都为空', 'The post has no text or media')
     };
   }
   
@@ -156,14 +157,14 @@ export function validateSettings(settings: Partial<ExtensionSettings>): Extensio
   if (!settings.savePath || settings.savePath.trim() === '') {
     return {
       type: ExtensionError.SETTINGS_NOT_FOUND,
-      message: '保存路径不能为空'
+      message: tr('保存路径不能为空', 'Enter a download subfolder')
     };
   }
   
   if (!settings.fileFormats || settings.fileFormats.length === 0) {
     return {
       type: ExtensionError.SETTINGS_NOT_FOUND,
-      message: '请至少选择一种文件格式'
+      message: tr('请至少选择一种文件格式', 'Select at least one export format')
     };
   }
   

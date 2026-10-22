@@ -1,12 +1,12 @@
 {
   "name": "gglknow",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "A Chrome extension to save tweets locally.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "npm run build:all",
-    "build:all": "npm run clean && tsc && vite build && npm run build:sw && npm run build:popup && npm run build:content && npm run build:reader && npm run copy:assets",
+    "build:all": "npm run clean && tsc && vite build && npm run build:sw && npm run build:popup && npm run build:content && npm run build:reader && npm run build:help && npm run copy:assets",
     "clean": "node scripts/build-utils.js clean",
     "build:sw": "rollup -c rollup.sw.config.js",
     "build:popup": "rollup -c rollup.popup.config.js",
@@ -17,7 +17,8 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "build:reader": "rollup -c rollup.reader.config.js"
+    "build:reader": "rollup -c rollup.reader.config.js",
+    "build:help": "rollup -c rollup.help.config.js"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "29.0.3",
